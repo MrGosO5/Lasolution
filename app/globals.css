@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gradient-start: #fce7f3;
+  --gradient-end: #e0e7ff;
+  --brand: #c026d3;
+  --brand-dark: #a21caf;
+  --logo-red: #c41e3a;
+  --logo-red-dark: #a01830;
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-fast: 150ms var(--ease-out);
+  --transition-smooth: 250ms var(--ease-out);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  min-height: 100vh;
+}
+
+body {
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    #faf5ff 50%,
+    var(--gradient-end) 100%
+  );
+  background-attachment: fixed;
+}
+
+summary::-webkit-details-marker { display: none; }
+
+/* Site primitives (pixel-perfect consistency) */
+.site-container {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 72rem; /* ~max-w-6xl */
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.site-section {
+  padding-top: 3.5rem; /* ~py-14 */
+  padding-bottom: 3.5rem;
+}
+
+.btn {
+  height: 2.75rem; /* 44px */
+  border-radius: 0.75rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
+}
+.btn:active { transform: scale(0.99); }
+.btn-primary {
+  background: var(--logo-red);
+  color: white;
+  box-shadow: 0 12px 22px rgba(196, 30, 58, 0.18);
+}
+.btn-primary:hover { background: var(--logo-red-dark); }
+.btn-dark {
+  background: #111827;
+  color: white;
+  box-shadow: 0 12px 22px rgba(0,0,0,0.12);
+}
+.btn-dark:hover { background: #000; }
+.btn-ghost {
+  background: rgba(255,255,255,0.75);
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.95); }
+
+.card {
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.70);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
+}
+.card:hover {
+  box-shadow: 0 10px 22px rgba(17,24,39,0.06);
+  transform: translateY(-2px);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s var(--ease-out) forwards;
+}
+
+/* Reveal stagger delays (used by app/site/components/Reveal.tsx) */
+.reveal-delay-70 { transition-delay: 70ms; }
+.reveal-delay-80 { transition-delay: 80ms; }
+.reveal-delay-120 { transition-delay: 120ms; }
+.reveal-delay-140 { transition-delay: 140ms; }
+.reveal-delay-160 { transition-delay: 160ms; }
+.reveal-delay-210 { transition-delay: 210ms; }
+
+/* Focus visible pour accessibilité */
+.focus-ring:focus-visible {
+  outline: 2px solid rgb(214 54 78 / 0.6);
+  outline-offset: 2px;
+}
+
+/* Transitions globales pour boutons et cartes */
+.transition-smooth {
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+/* Hauteurs pour barres de graphique (évite style inline) */
+.chart-bar-12 { height: 12.5%; }
+.chart-bar-25 { height: 25%; }
+.chart-bar-37 { height: 37.5%; }
+.chart-bar-56 { height: 56.25%; }
+.chart-bar-68 { height: 68.75%; }
+.chart-bar-87 { height: 87.5%; }
+.chart-bar-75 { height: 75%; }
+.chart-bar-62 { height: 62.5%; }
+.chart-bar-50 { height: 50%; }
+.chart-bar-31 { height: 31.25%; }
+.chart-bar-43 { height: 43.75%; }
+.chart-bar-100 { height: 100%; }
