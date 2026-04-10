@@ -34,7 +34,7 @@ export default async function AccueilPage() {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Link
-                    href="/boutiques"
+                    href="/prise-de-contact"
                     className="group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--logo-red)]/20 transition-smooth bg-[var(--logo-red)] hover:bg-[var(--logo-red-dark)] active:scale-[0.99]"
                   >
                     Commencez maintenant

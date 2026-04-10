@@ -62,6 +62,9 @@ export async function SiteFooter() {
             <Link className="text-gray-700 hover:text-gray-900" href="/support">
               Support client
             </Link>
+            <Link className="text-gray-700 hover:text-gray-900" href="/prise-de-contact">
+              Prise de contact
+            </Link>
             <Link className="text-gray-700 hover:text-gray-900" href="/devenir-point-relai">
               Devenir Partenaire Point Relai
             </Link>
