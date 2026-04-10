@@ -1,0 +1,46 @@
+{
+  "routes": [
+    {
+      "countryCode": "BJ",
+      "currency": "XOF",
+      "method": "mobile_money",
+      "provider": "flutterwave",
+      "priority": 1
+    },
+    {
+      "countryCode": "BJ",
+      "currency": "XOF",
+      "method": "card",
+      "provider": "flutterwave",
+      "priority": 2
+    },
+    {
+      "countryCode": "TG",
+      "currency": "XOF",
+      "method": "mobile_money",
+      "provider": "flutterwave",
+      "priority": 1
+    },
+    {
+      "countryCode": "GA",
+      "currency": "XAF",
+      "method": "card",
+      "provider": "stripe",
+      "priority": 1
+    },
+    {
+      "countryCode": "FR",
+      "currency": "EUR",
+      "method": "card",
+      "provider": "stripe",
+      "priority": 1
+    },
+    {
+      "countryCode": "*",
+      "currency": "*",
+      "method": "bank_transfer",
+      "provider": "offline",
+      "priority": 99
+    }
+  ]
+}

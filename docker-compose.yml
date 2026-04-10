@@ -1,0 +1,120 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lasolution-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lasolution}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lasolution}
+      POSTGRES_DB: ${POSTGRES_DB:-lasolution}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lasolution-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    profiles: ["dev"]
+    image: minio/minio:latest
+    container_name: lasolution-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123456}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  mailpit:
+    profiles: ["dev"]
+    image: axllent/mailpit:latest
+    container_name: lasolution-mailpit
+    ports:
+      - "${MAILPIT_SMTP:-1025}:1025"
+      - "${MAILPIT_UI:-8025}:8025"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lasolution-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lasolution}:${POSTGRES_PASSWORD:-lasolution}@postgres:5432/${POSTGRES_DB:-lasolution}
+      REDIS_URL: redis://redis:6379
+      BACKEND_PORT: 4000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-adminlasolution@gmail.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-adminlasolution@x}
+      CLIENT_PASSWORD: ${CLIENT_PASSWORD:-client}
+      PARTNER_PASSWORD: ${PARTNER_PASSWORD:-partner}
+    restart: unless-stopped
+    command: ["sh", "-c", "npx prisma migrate deploy && node src/server.js"]
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lasolution-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lasolution}:${POSTGRES_PASSWORD:-lasolution}@postgres:5432/${POSTGRES_DB:-lasolution}
+      REDIS_URL: redis://redis:6379
+    restart: unless-stopped
+    command: ["node", "src/worker.js"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lasolution-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3001:3001"
+    environment:
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3001}
+      AUTH_API_URL: http://backend:4000
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

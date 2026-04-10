@@ -1,0 +1,13 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" fill="#FDD835"/>
+  <circle cx="100" cy="70" r="30" fill="#FFECB3"/>
+  <path d="M70 140 C70 100, 130 100, 130 140 Z" fill="#FFECB3"/>
+  <path d="M85 85 C85 80, 90 80, 90 85 Z" fill="#9C27B0"/>
+  <path d="M115 85 C115 80, 110 80, 110 85 Z" fill="#9C27B0"/>
+  <path d="M80 110 C80 115, 120 115, 120 110 Z" stroke="#9C27B0" stroke-width="2" stroke-linecap="round"/>
+  <rect x="50" y="150" width="20" height="30" fill="#FFB74D"/>
+  <rect x="130" y="150" width="20" height="30" fill="#FFB74D"/>
+  <text x="100" y="100" font-family="Arial" font-size="20" fill="#000" text-anchor="middle" alignment-baseline="middle">♀</text>
+  <text x="100" y="175" font-family="Arial" font-size="16" fill="#000" text-anchor="middle" alignment-baseline="middle" transform="rotate(-15 50 165)">🛍️</text>
+  <text x="100" y="175" font-family="Arial" font-size="16" fill="#000" text-anchor="middle" alignment-baseline="middle" transform="rotate(15 150 165)">🛍️</text>
+</svg>

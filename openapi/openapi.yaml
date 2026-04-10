@@ -1,0 +1,688 @@
+openapi: 3.1.0
+info:
+  title: Lasolution API
+  description: |
+    Contrat HTTP v1 — JWT Bearer (`accessToken` depuis `/auth/login` si PostgreSQL actif),
+    commandes/colis, webhooks PSP async (worker), paiements multi-rail, stubs Zoho/transporteur.
+    Schémas alignés sur `backend/prisma/schema.prisma`.
+  version: 0.2.0
+
+servers:
+  - url: http://localhost:4000
+    description: Développement local
+
+tags:
+  - name: health
+  - name: auth
+  - name: payments
+  - name: webhooks
+  - name: billing
+  - name: logistics
+  - name: admin
+  - name: client
+  - name: relais
+  - name: packer
+  - name: livreur
+  - name: ambassadeur
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Jeton `accessToken` retourné par POST /auth/login (nécessite DB + `API_JWT_SECRET`).
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: Session NextAuth (front) — distinct du Bearer API.
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        total:
+          type: integer
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      required: [id, email, role, name]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, client, relais, solupacker, solu_livreur, ambassadeur]
+        name:
+          type: string
+        accessToken:
+          type: string
+          description: Présent si la base est joignable (JWT court).
+        refreshToken:
+          type: string
+          description: Rotation via POST /auth/refresh.
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    PaymentRouteRequest:
+      type: object
+      required: [countryCode]
+      properties:
+        countryCode:
+          type: string
+          example: BJ
+        currency:
+          type: string
+          example: XOF
+        method:
+          type: string
+          example: mobile_money_orange
+    PaymentRouteResponse:
+      type: object
+      properties:
+        providerCode:
+          type: string
+        methodCode:
+          type: string
+        countryCode:
+          type: string
+        currency:
+          type: string
+    PaymentIntentRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        provider:
+          type: string
+          example: stripe
+        amount:
+          type: number
+        currency:
+          type: string
+        orderId:
+          type: string
+        idempotencyKey:
+          type: string
+    PaymentIntentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        clientSecret:
+          type: string
+          nullable: true
+    WebhookAck:
+      type: object
+      properties:
+        received:
+          type: boolean
+        duplicate:
+          type: boolean
+    ZohoDraftRequest:
+      type: object
+      properties:
+        orderId:
+          type: string
+        lines:
+          type: array
+          items:
+            type: object
+    ZohoDraftResponse:
+      type: object
+      properties:
+        zohoDraftId:
+          type: string
+    ZohoApproveRequest:
+      type: object
+      required: [zohoDraftId]
+      properties:
+        zohoDraftId:
+          type: string
+    CarrierShipmentRequest:
+      type: object
+      required: [parcelId]
+      properties:
+        parcelId:
+          type: string
+        weightKg:
+          type: number
+        toAddress:
+          type: object
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Santé du service API
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  service:
+                    type: string
+
+  /auth/login:
+    post:
+      tags: [auth, admin, client, relais, packer, livreur, ambassadeur]
+      summary: Connexion (démo credentials / mots de passe d’environnement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Utilisateur authentifié (profil minimal)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit connexion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotation du refresh token (révoque l’ancien, en émet un nouveau)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Nouveaux jetons
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, refreshToken, user]
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  user:
+                    type: object
+                    required: [id, email, role, name]
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                      name:
+                        type: string
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Sans base de données
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /payments/route:
+    post:
+      tags: [payments, client, admin]
+      summary: Résout le rail PSP / méthode selon pays et devise (PaymentRouter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRouteRequest"
+      responses:
+        "200":
+          description: Route de paiement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentRouteResponse"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /payments/intent:
+    post:
+      tags: [payments, client, admin]
+      summary: Crée une intention de paiement (stub connecteur PSP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentIntentRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentIntentResponse"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /webhooks/psp/{provider}:
+    post:
+      tags: [webhooks, payments]
+      summary: Réception webhook PSP (idempotence `provider` + `event_id`)
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookAck"
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /billing/zoho/draft:
+    post:
+      tags: [billing, admin]
+      security:
+        - BearerAuth: []
+      summary: Crée ou met à jour un brouillon facture Zoho (stub)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZohoDraftRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZohoDraftResponse"
+
+  /billing/zoho/approve:
+    post:
+      tags: [billing, admin]
+      security:
+        - BearerAuth: []
+      summary: Approuve / envoie une facture Zoho (stub)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZohoApproveRequest"
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /carriers/shipment:
+    post:
+      tags: [logistics, admin]
+      security:
+        - BearerAuth: []
+      summary: Crée une expédition / étiquette (stub CarrierAdapter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CarrierShipmentRequest"
+      responses:
+        "200":
+          description: Étiquette / tracking (stub)
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /me:
+    get:
+      tags: [auth, admin, client, relais, packer, livreur, ambassadeur]
+      security:
+        - BearerAuth: []
+      summary: Profil issu du JWT
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /orders:
+    get:
+      tags: [admin, client]
+      security:
+        - BearerAuth: []
+      summary: Liste paginée des commandes (admin = tout, client = ses commandes)
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags: [admin, client]
+      security:
+        - BearerAuth: []
+      summary: Crée une commande (+ 1 colis CREATED). Admin peut passer `userId`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, lines]
+              properties:
+                userId:
+                  type: string
+                  description: Réservé admin
+                type:
+                  type: string
+                  enum: [DIRECT_TO_WAREHOUSE, CONCIERGE_PURCHASE]
+                deliveryMode:
+                  type: string
+                currency:
+                  type: string
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    required: [description, unitPrice, currency]
+                    properties:
+                      description:
+                        type: string
+                      quantity:
+                        type: integer
+                      unitPrice:
+                        type: number
+                      currency:
+                        type: string
+      responses:
+        "201":
+          description: Créée
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /orders/{id}:
+    get:
+      tags: [admin, client]
+      security:
+        - BearerAuth: []
+      summary: Détail commande (lignes, colis, conciergerie si présente)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /parcels/{id}:
+    get:
+      tags: [admin, client, relais, livreur]
+      security:
+        - BearerAuth: []
+      summary: Détail colis (RBAC — relais/livreur autorisés en lecture)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags: [admin]
+      security:
+        - BearerAuth: []
+      summary: Mise à jour admin (poids, statut) + audit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                weightKg:
+                  type: number
+                status:
+                  type: string
+      responses:
+        "200":
+          description: OK
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /me/shifts:
+    get:
+      tags: [livreur]
+      security:
+        - BearerAuth: []
+      summary: Créneaux livreur
+      responses:
+        "200":
+          description: OK
+    put:
+      tags: [livreur]
+      security:
+        - BearerAuth: []
+      summary: Remplace les créneaux (liste `shifts` avec startAt/endAt ISO)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shifts:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: OK
+
+  /delivery-jobs:
+    get:
+      tags: [livreur]
+      security:
+        - BearerAuth: []
+      summary: Courses proposées (statut OFFERED)
+      responses:
+        "200":
+          description: OK
+
+  /delivery-jobs/{id}/accept:
+    post:
+      tags: [livreur]
+      security:
+        - BearerAuth: []
+      summary: Acceptation course (statut ASSIGNED)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        "409":
+          description: Plus disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /me/commissions/daily:
+    get:
+      tags: [ambassadeur]
+      security:
+        - BearerAuth: []
+      summary: Agrégation journalière des écritures ledger (wallet)
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK (vide si pas de wallet)
