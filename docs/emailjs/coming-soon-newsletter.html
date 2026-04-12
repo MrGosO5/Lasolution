@@ -1,41 +1,56 @@
 <!--
-  EmailJS — modèle « Newsletter Coming Soon » (pied de page)
-  Service : service_e9ptm4c
+  EmailJS — Newsletter (bas de page) — id template si dédié : à définir via EMAILJS_TEMPLATE_NEWSLETTER
+  Couleurs alignées sur app/globals.css :root (même palette que la page coming soon)
 
-  Sujet suggéré :
-  [Coming Soon] Newsletter — {{email}}
+  Sujet suggéré : [Coming Soon] Newsletter — {{email}}
 
-  Variables :
-  - email   adresse inscrite à la newsletter
+  Variable : email
 -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Coming Soon — newsletter</title>
+  <title>La Solution — Newsletter</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .wrap { padding: 12px 10px !important; }
+      .pad { padding: 22px 18px 26px !important; }
+      .head { padding: 22px 18px !important; }
+      .h1 { font-size: 18px !important; }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:24px 12px;">
+<body style="margin:0;padding:0;background-color:#fce7f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" class="wrap" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fce7f3;padding:26px 14px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 22px rgba(195,35,83,0.1);">
           <tr>
-            <td style="background:linear-gradient(135deg,#ffeaea 0%,#fff5f8 100%);padding:24px;text-align:center;border-bottom:1px solid rgba(195,35,83,0.12);">
-              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#c32353;">La Solution</p>
-              <h1 style="margin:0;font-size:20px;line-height:1.3;color:#111827;font-weight:700;">Inscription newsletter</h1>
-              <p style="margin:10px 0 0;font-size:14px;color:#6b7280;">Page Coming Soon — notification au lancement</p>
+            <td class="head" style="background:linear-gradient(135deg,#c32353 0%,#d12e5e 100%);padding:24px 26px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.9);">La Solution</p>
+              <h1 class="h1" style="margin:0;font-size:20px;line-height:1.3;color:#ffffff;font-weight:700;">Inscription newsletter</h1>
+              <p style="margin:10px 0 0;font-size:14px;color:rgba(255,255,255,0.9);">Coming Soon</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:28px 24px 32px;text-align:center;">
-              <p style="margin:0 0 12px;font-size:14px;color:#4b5563;">Nouvelle adresse à notifier :</p>
-              <p style="margin:0;font-size:18px;font-weight:600;">
-                <a href="mailto:{{email}}" style="color:#c32353;text-decoration:none;">{{email}}</a>
-              </p>
-              <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#6b7280;">
-                Répondez depuis votre messagerie pour contacter cette personne si besoin.
-              </p>
+            <td class="pad" style="padding:28px 26px 30px;text-align:center;">
+              <p style="margin:0 0 14px;font-size:15px;color:#222222;">Nouvelle adresse à notifier au lancement :</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fff5f8;border:1px solid rgba(195,35,83,0.15);border-radius:12px;">
+                <tr>
+                  <td style="padding:20px 18px;">
+                    <p style="margin:0;font-size:18px;font-weight:700;word-break:break-all;">
+                      <a href="mailto:{{email}}" style="color:#d12e5e;text-decoration:none;">{{email}}</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:22px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">Réponse possible via votre messagerie (reply-to selon configuration EmailJS).</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 18px;background-color:#fff5f8;border-top:1px solid rgba(195,35,83,0.12);text-align:center;font-size:11px;color:#9ca3af;">
+              La Solution — palette globals.css
             </td>
           </tr>
         </table>

@@ -1,32 +1,26 @@
 import emailjs from "@emailjs/nodejs";
+import {
+  emailjsPrivateKeyFromEnv,
+  emailjsPublicKeyOrDefault,
+  emailjsServiceIdOrDefault,
+  emailjsTemplateNewsletterOrDefault,
+  emailjsTemplateWaitlistForProfile,
+  emailjsTemplateWaitlistUserConfirmFromEnv,
+} from "@/lib/constants/emailjsComingSoon";
 
-/** Valeurs fournies côté projet ; surcharge avec EMAILJS_* dans `.env.local`. */
-const SERVICE_ID_DEFAULT = "service_e9ptm4c";
-const TEMPLATE_WAITLIST_DEFAULT = "template_mr9j0ml";
-const TEMPLATE_NEWSLETTER_DEFAULT = "template_upuvay2";
+/**
+ * Coming soon — EmailJS
+ * - « Soumettre ma demande » : onglet **Achat assisté** (`profile=buyer`) ou **Expédition de colis** (`profile=pro`).
+ * - **Newsletter** (bas de page) : variable `email` uniquement.
+ *
+ * Identifiants et clés par défaut : `lib/constants/emailjsComingSoon.ts` (+ surcharge `.env.local`, voir `EMAILJS_ENV_KEYS`).
+ */
 
 function keys(): { publicKey: string; privateKey: string } | null {
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY?.trim();
-  const privateKey = process.env.EMAILJS_PRIVATE_KEY?.trim();
-  if (!publicKey || !privateKey) return null;
+  const publicKey = emailjsPublicKeyOrDefault();
+  const privateKey = emailjsPrivateKeyFromEnv();
+  if (!privateKey) return null;
   return { publicKey, privateKey };
-}
-
-function serviceId() {
-  return process.env.EMAILJS_SERVICE_ID?.trim() || SERVICE_ID_DEFAULT;
-}
-
-function templateWaitlist() {
-  return process.env.EMAILJS_TEMPLATE_WAITLIST?.trim() || TEMPLATE_WAITLIST_DEFAULT;
-}
-
-function templateNewsletter() {
-  return process.env.EMAILJS_TEMPLATE_NEWSLETTER?.trim() || TEMPLATE_NEWSLETTER_DEFAULT;
-}
-
-/** Si défini dans `.env.local`, envoi d’un accusé de réception au visiteur (template EmailJS avec « To » = `{{to_email}}`). */
-function templateWaitlistUserConfirm() {
-  return process.env.EMAILJS_TEMPLATE_WAITLIST_CONFIRM?.trim() || "";
 }
 
 export async function sendComingSoonWaitlistEmailJs(params: {
@@ -48,8 +42,8 @@ export async function sendComingSoonWaitlistEmailJs(params: {
 
   try {
     await emailjs.send(
-      serviceId(),
-      templateWaitlist(),
+      emailjsServiceIdOrDefault(),
+      emailjsTemplateWaitlistForProfile(params.profile),
       {
         profile_label,
         name: params.name,
@@ -74,12 +68,12 @@ export async function sendComingSoonWaitlistUserConfirmationEmailJs(params: {
   email: string;
 }): Promise<void> {
   const k = keys();
-  const tid = templateWaitlistUserConfirm();
+  const tid = emailjsTemplateWaitlistUserConfirmFromEnv();
   if (!k || !tid) return;
 
   try {
     await emailjs.send(
-      serviceId(),
+      emailjsServiceIdOrDefault(),
       tid,
       {
         to_email: params.email,
@@ -99,8 +93,8 @@ export async function sendComingSoonNewsletterEmailJs(email: string): Promise<vo
 
   try {
     await emailjs.send(
-      serviceId(),
-      templateNewsletter(),
+      emailjsServiceIdOrDefault(),
+      emailjsTemplateNewsletterOrDefault(),
       { email },
       k,
     );

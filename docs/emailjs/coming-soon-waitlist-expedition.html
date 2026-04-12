@@ -1,20 +1,20 @@
 <!--
-  EmailJS — template_mr9j0ml · « Soumettre ma demande » — onglet Achat assisté (profile=buyer)
+  EmailJS — template_upuvay2 · « Soumettre ma demande » — onglet Expédition de colis (profile=pro)
   Couleurs alignées sur app/globals.css :root :
-    --coming-soon-hero-magenta #c32353  --coming-soon-accent #d12e5e  --coming-soon-surface #fff5f8
-    --coming-soon-hero-cta-bg #333333  --logo-red #c41e3a  --logo-red-dark #a01830
-    --coming-soon-hero-subtitle #222222  --gradient-start #fce7f3
+    --logo-red-dark #a01830  --logo-red #c41e3a  --coming-soon-accent #d12e5e
+    --coming-soon-surface #fff5f8  --coming-soon-hero-subtitle #222222  --gradient-start #fce7f3
 
-  Sujet suggéré : [Coming Soon] Achat assisté — {{name}}
+  Sujet suggéré : [Coming Soon] Expédition — {{name}}
 
   Variables : profile_label, name, email, full_phone, article_url, submitted_at
+  (article_url sera souvent « — » pour ce profil)
 -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>La Solution — Achat assisté</title>
+  <title>La Solution — Expédition</title>
   <style>
     @media only screen and (max-width: 600px) {
       .wrap { padding: 12px 10px !important; }
@@ -30,51 +30,51 @@
   <table role="presentation" class="wrap" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fce7f3;padding:24px 14px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(195,35,83,0.12);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(160,24,48,0.14);">
           <tr>
-            <td class="head-pad" style="background:linear-gradient(135deg,#c32353 0%,#d12e5e 100%);padding:26px 28px;text-align:center;">
+            <td class="head-pad" style="background:linear-gradient(135deg,#a01830 0%,#c41e3a 100%);padding:26px 28px;text-align:center;">
               <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.9);">La Solution</p>
-              <h1 class="h1" style="margin:0;font-size:22px;line-height:1.25;color:#ffffff;font-weight:700;">Achat assisté — nouvelle demande</h1>
+              <h1 class="h1" style="margin:0;font-size:22px;line-height:1.25;color:#ffffff;font-weight:700;">Expédition de colis — nouvelle demande</h1>
               <p style="margin:10px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">Coming Soon — liste d’attente</p>
             </td>
           </tr>
           <tr>
             <td class="card-pad" style="padding:28px 28px 24px;">
               <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#222222;">Bonjour,</p>
-              <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#222222;">Une personne a soumis une demande pour l’<strong style="color:#c32353;">achat assisté</strong>.</p>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-radius:12px;background-color:#fff5f8;border:1px solid rgba(195,35,83,0.15);">
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#222222;">Une personne a soumis une demande pour l’<strong style="color:#c41e3a;">expédition de colis</strong>.</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-radius:12px;background-color:#fff5f8;border:1px solid rgba(196,30,58,0.18);">
                 <tr>
-                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(195,35,83,0.12);">
+                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(196,30,58,0.12);">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#d12e5e;">Profil</p>
-                    <p style="margin:0;font-size:16px;font-weight:700;color:#c32353;">{{profile_label}}</p>
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#c41e3a;">{{profile_label}}</p>
                   </td>
                 </tr>
                 <tr>
-                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(195,35,83,0.12);">
+                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(196,30,58,0.12);">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Nom</p>
                     <p style="margin:0;font-size:16px;color:#222222;font-weight:600;">{{name}}</p>
                   </td>
                 </tr>
                 <tr>
-                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(195,35,83,0.12);">
+                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(196,30,58,0.12);">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">E-mail</p>
                     <p style="margin:0;font-size:16px;"><a href="mailto:{{email}}" style="color:#d12e5e;text-decoration:none;font-weight:600;">{{email}}</a></p>
                   </td>
                 </tr>
                 <tr>
-                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(195,35,83,0.12);">
+                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(196,30,58,0.12);">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Téléphone</p>
                     <p style="margin:0;font-size:16px;color:#222222;font-family:ui-monospace,monospace;">{{full_phone}}</p>
                   </td>
                 </tr>
                 <tr>
-                  <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(195,35,83,0.12);">
+                  <td class="cell" style="padding:14px 18px;">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Lien article</p>
-                    <p style="margin:0;font-size:14px;word-break:break-all;line-height:1.5;color:#222222;"><a href="{{article_url}}" style="color:#d12e5e;">{{article_url}}</a></p>
+                    <p style="margin:0;font-size:14px;word-break:break-all;line-height:1.5;color:#9ca3af;">{{article_url}}</p>
                   </td>
                 </tr>
                 <tr>
-                  <td class="cell" style="padding:14px 18px;">
+                  <td class="cell" style="padding:14px 18px;border-top:1px solid rgba(196,30,58,0.12);">
                     <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Reçu le</p>
                     <p style="margin:0;font-size:13px;color:#6b7280;">{{submitted_at}}</p>
                   </td>
@@ -83,15 +83,15 @@
               <table role="presentation" class="btn" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:22px auto 0;">
                 <tr>
                   <td style="border-radius:10px;background-color:#333333;">
-                    <a href="mailto:{{email}}?subject=La%20Solution%20%E2%80%94%20Achat%20assist%C3%A9" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Répondre au visiteur</a>
+                    <a href="mailto:{{email}}?subject=La%20Solution%20%E2%80%94%20Exp%C3%A9dition" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Répondre au visiteur</a>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:16px 22px;background-color:#fff5f8;border-top:1px solid rgba(195,35,83,0.12);text-align:center;font-size:11px;line-height:1.5;color:#6b7280;">
-              La Solution — couleurs maquette <span style="color:#9ca3af;">(globals.css)</span>
+            <td style="padding:16px 22px;background-color:#fff5f8;border-top:1px solid rgba(196,30,58,0.12);text-align:center;font-size:11px;line-height:1.5;color:#6b7280;">
+              La Solution — expédition &amp; achat assisté
             </td>
           </tr>
         </table>

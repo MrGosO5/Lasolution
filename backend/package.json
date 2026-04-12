@@ -4,6 +4,7 @@
   "private": true,
   "main": "src/server.js",
   "scripts": {
+    "predev": "prisma generate",
     "dev": "node src/server.js",
     "start": "node src/server.js",
     "worker": "node src/worker.js",
@@ -23,6 +24,7 @@
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
+    "lasolution-dashboard": "file:..",
     "nodemailer": "^6.9.16",
     "stripe": "^17.7.0"
   },

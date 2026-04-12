@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
+    "backend:install": "npm --prefix backend install",
+    "backend:generate": "npm --prefix backend run db:generate",
     "backend:dev": "npm --prefix backend run dev",
     "docker:dev": "docker compose --profile dev up -d postgres redis minio mailpit",
     "docker:down": "docker compose --profile dev down",
