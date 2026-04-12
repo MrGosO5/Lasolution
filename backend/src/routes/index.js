@@ -292,6 +292,184 @@ function setupPublicContactRoute(app) {
 }
 
 /**
+ * Liste d’attente page Coming Soon — SecurityEvent + email vers CUSTOMERCARE_EMAIL (SMTP si configuré).
+ */
+function setupPublicComingSoonWaitlistRoute(app) {
+  const allowedDials = new Set([
+    "+229",
+    "+228",
+    "+225",
+    "+221",
+    "+223",
+    "+226",
+    "+227",
+    "+224",
+    "+235",
+    "+241",
+    "+242",
+    "+33",
+    "+32",
+    "+41",
+    "+1",
+  ]);
+
+  app.post("/public/coming-soon-waitlist", async (req, res) => {
+    const prisma = getPrisma();
+    const body = req.body || {};
+    const clean = (s, max) => (typeof s === "string" ? s.trim().slice(0, max) : "");
+    const profileRaw = clean(body.profile, 20).toLowerCase();
+    const profile = profileRaw === "pro" ? "pro" : profileRaw === "buyer" ? "buyer" : "";
+    const name = clean(body.name, 200);
+    const email = clean(body.email, 320).toLowerCase();
+    const phoneDial = clean(body.phoneDial, 12);
+    const phoneLocal = clean(body.phone, 40);
+    let articleUrl = clean(body.articleUrl, 2000);
+
+    if (!profile) {
+      return res.status(400).json({ error: "Profil invalide (buyer ou pro attendu)." });
+    }
+    if (!name || !email || !phoneLocal) {
+      return res.status(400).json({ error: "Nom, email et téléphone requis." });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Email invalide." });
+    }
+    if (!phoneDial || !allowedDials.has(phoneDial)) {
+      return res.status(400).json({ error: "Indicatif téléphonique invalide." });
+    }
+    if (profile === "buyer") {
+      if (!articleUrl) {
+        return res.status(400).json({ error: "L’URL de l’article est requise pour l’achat assisté." });
+      }
+      try {
+        const u = new URL(articleUrl);
+        if (!u.protocol.startsWith("http")) {
+          return res.status(400).json({ error: "URL d’article invalide (http ou https requis)." });
+        }
+      } catch {
+        return res.status(400).json({ error: "URL d’article invalide." });
+      }
+    } else {
+      articleUrl = "";
+    }
+
+    if (!prisma) {
+      return res.status(503).json({ error: "Base indisponible." });
+    }
+
+    const fullPhone = `${phoneDial} ${phoneLocal}`.trim();
+    const meta = {
+      profile,
+      name,
+      articleUrl: articleUrl || null,
+      phoneDial,
+      phoneLocal,
+      fullPhone,
+      submittedAt: new Date().toISOString(),
+    };
+
+    try {
+      await prisma.securityEvent.create({
+        data: {
+          type: "coming_soon_waitlist",
+          email,
+          ip: req.ip || null,
+          userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
+          meta,
+        },
+      });
+    } catch (e) {
+      return res.status(500).json({ error: String(e.message || e) });
+    }
+
+    const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
+    const profileLabel = profile === "buyer" ? "Achat assisté" : "Expédition de colis";
+    const text = [
+      "Nouvelle inscription — liste d’attente Coming Soon.",
+      "",
+      `Profil: ${profileLabel}`,
+      `Nom: ${name}`,
+      `Email: ${email}`,
+      `Téléphone (appel): ${fullPhone}`,
+      profile === "buyer" ? `URL article: ${articleUrl}` : null,
+      "",
+      "Répondre à ce message pour joindre le client par email.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const transporter = createSmtpTransporter();
+      await transporter.sendMail({
+        from: buildMailFrom(),
+        to,
+        subject: `[Coming Soon] ${profileLabel} — ${name}`,
+        text,
+        replyTo: email,
+      });
+    } catch (mailErr) {
+      console.warn("[public/coming-soon-waitlist] email non envoyé:", mailErr?.message || mailErr);
+    }
+
+    res.json({ ok: true });
+  });
+}
+
+/**
+ * Newsletter Coming Soon (email seul) — SecurityEvent + email équipe.
+ */
+function setupPublicComingSoonNewsletterRoute(app) {
+  app.post("/public/coming-soon-newsletter", async (req, res) => {
+    const prisma = getPrisma();
+    const body = req.body || {};
+    const clean = (s, max) => (typeof s === "string" ? s.trim().slice(0, max) : "");
+    const email = clean(body.email, 320).toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Email valide requis." });
+    }
+    if (!prisma) {
+      return res.status(503).json({ error: "Base indisponible." });
+    }
+    try {
+      await prisma.securityEvent.create({
+        data: {
+          type: "coming_soon_newsletter",
+          email,
+          ip: req.ip || null,
+          userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
+          meta: { submittedAt: new Date().toISOString() },
+        },
+      });
+    } catch (e) {
+      return res.status(500).json({ error: String(e.message || e) });
+    }
+
+    const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
+    const text = [
+      "Inscription newsletter — page Coming Soon.",
+      "",
+      `Email: ${email}`,
+      "",
+      "Répondre à ce message pour joindre la personne par email.",
+    ].join("\n");
+    try {
+      const transporter = createSmtpTransporter();
+      await transporter.sendMail({
+        from: buildMailFrom(),
+        to,
+        subject: `[Coming Soon] Newsletter — ${email}`,
+        text,
+        replyTo: email,
+      });
+    } catch (mailErr) {
+      console.warn("[public/coming-soon-newsletter] email non envoyé:", mailErr?.message || mailErr);
+    }
+
+    res.json({ ok: true });
+  });
+}
+
+/**
  * Déclaration de voyage SoluPacker — enregistrement + email optionnel vers CUSTOMERCARE_EMAIL.
  */
 function setupPublicTripDeclaration(app) {
@@ -880,6 +1058,8 @@ function setupRoutes(app, config) {
   setupAdminApplicationsRoute(app);
   setupOrderCancelRoute(app);
   setupPublicContactRoute(app);
+  setupPublicComingSoonWaitlistRoute(app);
+  setupPublicComingSoonNewsletterRoute(app);
   setupPublicTripDeclaration(app);
   setupPublicPartnerRelayApplication(app);
   setupPublicSolupackerApplication(app);

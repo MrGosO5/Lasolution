@@ -1,0 +1,42 @@
+<!--
+  EmailJS — accusé de réception pour le VISITEUR (optionnel)
+
+  1. Crée un nouveau template dans le même service (ex. service_e9ptm4c).
+  2. Dans les paramètres du template, « To email » / destinataire : {{to_email}}
+     (selon l’interface EmailJS, la variable peut s’appeler autrement ; adapte pour qu’elle
+     reçoive l’adresse du visiteur.)
+  3. Ajoute dans .env.local :
+     EMAILJS_TEMPLATE_WAITLIST_CONFIRM=ton_template_id
+
+  Sujet suggéré :
+  La Solution — nous avons bien reçu votre demande
+
+  Variables envoyées par le site :
+  - to_email   (même valeur que email — pour le champ To)
+  - name
+  - email
+-->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:24px 12px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#ffeaea 0%,#fff5f8 100%);padding:24px;text-align:center;">
+            <p style="margin:0;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#c32353;">La Solution</p>
+            <h1 style="margin:12px 0 0;font-size:20px;color:#111827;">Demande bien reçue</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 24px;">
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#374151;">Bonjour {{name}},</p>
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#374151;">
+              Nous avons bien enregistré votre demande depuis notre page <strong>Coming Soon</strong>.
+              Notre équipe vous recontactera bientôt à l’adresse <strong>{{email}}</strong> ou au numéro indiqué.
+            </p>
+            <p style="margin:0;font-size:14px;line-height:1.5;color:#6b7280;">Merci pour votre confiance.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

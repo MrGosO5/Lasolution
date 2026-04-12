@@ -9,6 +9,14 @@
   --brand-dark: #a21caf;
   --logo-red: #c41e3a;
   --logo-red-dark: #a01830;
+  /* Maquette Coming Soon (Figma / PDF) */
+  --coming-soon-accent: #d12e5e;
+  --coming-soon-surface: #fff5f8;
+  /* Hero Frame 79 (titres + CTA) — couleurs Figma pour fond clair */
+  --coming-soon-hero-magenta: #c32353;
+  --coming-soon-hero-cta-bg: #333333;
+  --coming-soon-hero-kicker: #000000;
+  --coming-soon-hero-subtitle: #222222;
   --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --transition-fast: 150ms var(--ease-out);
   --transition-smooth: 250ms var(--ease-out);
@@ -141,3 +149,113 @@ summary::-webkit-details-marker { display: none; }
 .chart-bar-31 { height: 31.25%; }
 .chart-bar-43 { height: 43.75%; }
 .chart-bar-100 { height: 100%; }
+
+/* Page /coming-soon — hero Figma Frame 84 (tuiles LOGO-SOLUTION.png @ 5 %) */
+.coming-soon-hero-frame84-wrap {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  /* Fond laissé au hero (blanc) : filigranes Frame 84 en 5 % se voient en gris très léger sur les bords */
+  background-color: transparent;
+}
+
+.coming-soon-hero-frame84 {
+  position: absolute;
+  top: 125px;
+  left: 50%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
+  width: min(1109.9px, calc(100vw - 32px));
+  height: 596.54px;
+  transform: translateX(calc(-50% + 19.95px));
+}
+
+@media (max-width: 767px) {
+  .coming-soon-hero-frame84 {
+    display: none;
+  }
+}
+
+.coming-soon-hero-g3,
+.coming-soon-hero-g4 {
+  position: relative;
+  width: 199.95px;
+  height: 596.54px;
+  flex: none;
+}
+
+.coming-soon-hero-g4 {
+  transform: matrix(-1, 0, 0, 1, 0, 0);
+}
+
+.coming-soon-hero-g3-mark {
+  position: absolute;
+  background-image: url("/icon/LOGO-SOLUTION.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.05;
+}
+
+/* Group 3 — positions & rotations Figma */
+.coming-soon-hero-g3-mark--a {
+  width: 165px;
+  height: 121px;
+  left: 6px;
+  top: 0;
+  transform: rotate(12.73deg);
+}
+
+.coming-soon-hero-g3-mark--b {
+  width: 165px;
+  height: 121px;
+  left: 6px;
+  top: 83px;
+  transform: rotate(12.73deg);
+}
+
+.coming-soon-hero-g3-mark--c {
+  width: 165px;
+  height: 121px;
+  left: 17.3px;
+  top: 195px;
+  transform: rotate(0deg);
+}
+
+.coming-soon-hero-g3-mark--d {
+  width: 165px;
+  height: 121px;
+  left: 7.22px;
+  top: 299.69px;
+  transform: rotate(-12deg);
+}
+
+.coming-soon-hero-g3-mark--e {
+  width: 165px;
+  height: 121px;
+  left: 0;
+  top: 418.89px;
+  transform: rotate(-24deg);
+}
+
+/* Page /coming-soon */
+.coming-soon-dots {
+  background-color: var(--coming-soon-surface);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--coming-soon-accent) 14%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 24px 24px;
+}
+.coming-soon-btn-primary {
+  background-color: var(--coming-soon-accent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--coming-soon-accent) 35%, transparent);
+}
+.coming-soon-btn-primary:hover {
+  opacity: 0.96;
+}

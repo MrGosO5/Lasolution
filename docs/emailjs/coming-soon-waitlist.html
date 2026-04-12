@@ -1,0 +1,83 @@
+<!--
+  EmailJS — modèle « Liste d’attente Coming Soon »
+  Service : service_e9ptm4c (à lier dans le tableau de bord EmailJS)
+
+  Sujet suggéré dans EmailJS :
+  [Coming Soon] {{profile_label}} — {{name}}
+
+  Variables à envoyer (templateParams) :
+  - profile_label   ex. "Achat assisté" | "Expédition de colis"
+  - name
+  - email
+  - full_phone      ex. "+229 01 02 03 04 05"
+  - article_url     URL article (achat assisté) ou "—" / texte vide pour expédition
+  - submitted_at    optionnel, ex. ISO date
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coming Soon — nouvelle demande</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#ffeaea 0%,#fff5f8 100%);padding:28px 24px;text-align:center;border-bottom:1px solid rgba(195,35,83,0.12);">
+              <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#c32353;">La Solution</p>
+              <h1 style="margin:0;font-size:22px;line-height:1.25;color:#111827;font-weight:700;">Nouvelle demande — Coming Soon</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px 32px;">
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#4b5563;">
+                Une personne vient de soumettre le formulaire sur la page <strong>Coming Soon</strong>.
+              </p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:12px;background-color:#fafafa;border:1px solid #e5e7eb;">
+                <tr>
+                  <td style="padding:16px 18px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#9ca3af;">Profil</p>
+                    <p style="margin:0;font-size:16px;font-weight:600;color:#c32353;">{{profile_label}}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 18px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#9ca3af;">Nom &amp; prénom</p>
+                    <p style="margin:0;font-size:16px;color:#111827;">{{name}}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 18px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#9ca3af;">Email</p>
+                    <p style="margin:0;font-size:16px;"><a href="mailto:{{email}}" style="color:#c32353;text-decoration:none;">{{email}}</a></p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 18px;border-bottom:1px solid #e5e7eb;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#9ca3af;">Téléphone</p>
+                    <p style="margin:0;font-size:16px;color:#111827;">{{full_phone}}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#9ca3af;">URL de l’article</p>
+                    <p style="margin:0;font-size:14px;word-break:break-all;line-height:1.45;color:#374151;">{{article_url}}</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#6b7280;">
+                Répondez à ce message pour joindre le client : l’adresse de réponse peut être configurée sur <strong>{{email}}</strong> (reply-to selon votre intégration).
+              </p>
+              <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;">{{submitted_at}}</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">La Solution — achat assisté &amp; expédition internationale</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
