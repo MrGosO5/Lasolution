@@ -12,6 +12,10 @@ const { setupMissionRoutes } = require("./missions");
 const { setupShippingRequestRoutes } = require("./shippingRequests");
 const { requireAuth, requireRoles, strictRateLimit } = require("../middleware/auth");
 const { sendMail, createSmtpTransporter, buildMailFrom } = require("../emails/mailer");
+const {
+  sendComingSoonWaitlistEmailJs,
+  sendComingSoonNewsletterEmailJs,
+} = require("../emails/emailjsComingSoon");
 const { passwordResetEmail } = require("../emails/templates");
 
 function getPrisma() {
@@ -382,33 +386,18 @@ function setupPublicComingSoonWaitlistRoute(app) {
       return res.status(500).json({ error: String(e.message || e) });
     }
 
-    const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
-    const profileLabel = profile === "buyer" ? "Achat assisté" : "Expédition de colis";
-    const text = [
-      "Nouvelle inscription — liste d’attente Coming Soon.",
-      "",
-      `Profil: ${profileLabel}`,
-      `Nom: ${name}`,
-      `Email: ${email}`,
-      `Téléphone (appel): ${fullPhone}`,
-      profile === "buyer" ? `URL article: ${articleUrl}` : null,
-      "",
-      "Répondre à ce message pour joindre le client par email.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    try {
-      const transporter = createSmtpTransporter();
-      await transporter.sendMail({
-        from: buildMailFrom(),
-        to,
-        subject: `[Coming Soon] ${profileLabel} — ${name}`,
-        text,
-        replyTo: email,
-      });
-    } catch (mailErr) {
-      console.warn("[public/coming-soon-waitlist] email non envoyé:", mailErr?.message || mailErr);
+    const sentEmailJs = await sendComingSoonWaitlistEmailJs({
+      profile,
+      name,
+      email,
+      phoneDial,
+      phone: phoneLocal,
+      articleUrl: articleUrl || "",
+    });
+    if (!sentEmailJs) {
+      console.warn(
+        "[public/coming-soon-waitlist] EmailJS : envoi non effectué (EMAILJS_PRIVATE_KEY absente ou erreur API).",
+      );
     }
 
     res.json({ ok: true });
@@ -444,25 +433,11 @@ function setupPublicComingSoonNewsletterRoute(app) {
       return res.status(500).json({ error: String(e.message || e) });
     }
 
-    const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
-    const text = [
-      "Inscription newsletter — page Coming Soon.",
-      "",
-      `Email: ${email}`,
-      "",
-      "Répondre à ce message pour joindre la personne par email.",
-    ].join("\n");
-    try {
-      const transporter = createSmtpTransporter();
-      await transporter.sendMail({
-        from: buildMailFrom(),
-        to,
-        subject: `[Coming Soon] Newsletter — ${email}`,
-        text,
-        replyTo: email,
-      });
-    } catch (mailErr) {
-      console.warn("[public/coming-soon-newsletter] email non envoyé:", mailErr?.message || mailErr);
+    const sentEmailJs = await sendComingSoonNewsletterEmailJs(email);
+    if (!sentEmailJs) {
+      console.warn(
+        "[public/coming-soon-newsletter] EmailJS : envoi non effectué (EMAILJS_PRIVATE_KEY absente ou erreur API).",
+      );
     }
 
     res.json({ ok: true });

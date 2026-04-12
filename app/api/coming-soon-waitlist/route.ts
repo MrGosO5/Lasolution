@@ -72,11 +72,15 @@ export async function POST(req: Request) {
   }
 
   try {
-    await sendComingSoonWaitlistEmailJs(payload);
-    await sendComingSoonWaitlistUserConfirmationEmailJs({
-      name: payload.name,
-      email: payload.email,
-    });
+    if (data?.ok) {
+      if (skipBackendForComingSoon()) {
+        await sendComingSoonWaitlistEmailJs(payload);
+      }
+      await sendComingSoonWaitlistUserConfirmationEmailJs({
+        name: payload.name,
+        email: payload.email,
+      });
+    }
   } catch (err) {
     console.warn("[coming-soon-waitlist] EmailJS:", err);
   }

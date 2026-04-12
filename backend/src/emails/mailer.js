@@ -62,12 +62,16 @@ function createSmtpTransporter() {
 
 /**
  * Envoie un email. Ne rejette jamais — log l'erreur et continue.
- * @param {{ to: string, subject: string, html: string, text: string }} opts
+ * Si SMTP_HOST est absent ou vaut `localhost`, aucune connexion SMTP (évite ECONNREFUSED sur Mailpit non démarré).
+ * Pour Mailpit en local : SMTP_HOST=127.0.0.1 SMTP_PORT=1025
+ * @param {{ to: string, subject: string, html?: string, text?: string, replyTo?: string }} opts
  */
-async function sendMail({ to, subject, html, text }) {
+async function sendMail({ to, subject, html, text, replyTo }) {
   if (!process.env.SMTP_HOST || process.env.SMTP_HOST === "localhost") {
-    // En dev sans SMTP configuré : log uniquement
-    console.log(`[mailer] (dev/no-smtp) To: ${to} | Subject: ${subject}`);
+    console.log(
+      `[mailer] (dev/no-smtp) To: ${to} | Subject: ${subject}` +
+        (replyTo ? ` | replyTo: ${replyTo}` : ""),
+    );
     return;
   }
   try {
@@ -76,8 +80,9 @@ async function sendMail({ to, subject, html, text }) {
       from: buildMailFrom(),
       to,
       subject,
-      html,
-      text,
+      ...(html ? { html } : {}),
+      ...(text ? { text } : {}),
+      ...(replyTo ? { replyTo } : {}),
     });
     console.log(`[mailer] Sent: ${subject} → ${to}`);
   } catch (err) {

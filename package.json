@@ -7,6 +7,8 @@
     "backend:install": "npm --prefix backend install",
     "backend:generate": "npm --prefix backend run db:generate",
     "backend:dev": "npm --prefix backend run dev",
+    "backend:migrate": "npm --prefix backend run db:migrate",
+    "docker:db": "docker compose up -d postgres redis",
     "docker:dev": "docker compose --profile dev up -d postgres redis minio mailpit",
     "docker:down": "docker compose --profile dev down",
     "build": "next build",

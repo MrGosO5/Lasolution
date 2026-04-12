@@ -64,7 +64,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    await sendComingSoonNewsletterEmailJs(payload.email);
+    if (data?.ok && skipBackendForComingSoon()) {
+      await sendComingSoonNewsletterEmailJs(payload.email);
+    }
   } catch (err) {
     console.warn("[coming-soon-newsletter] EmailJS:", err);
   }
