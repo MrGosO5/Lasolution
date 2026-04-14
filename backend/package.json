@@ -4,15 +4,14 @@
   "private": true,
   "main": "src/server.js",
   "scripts": {
-    "predev": "dotenv -e ../.env.local -- prisma generate",
     "dev": "node src/server.js",
     "start": "node src/server.js",
     "worker": "node src/worker.js",
-    "db:generate": "dotenv -e ../.env.local -- prisma generate",
-    "db:migrate": "dotenv -e ../.env.local -- prisma migrate deploy",
-    "db:migrate:dev": "dotenv -e ../.env.local -- prisma migrate dev",
+    "db:generate": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- node ./scripts/prisma-generate-with-retry.cjs",
+    "db:migrate": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma migrate deploy",
+    "db:migrate:dev": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma migrate dev",
     "db:seed": "node prisma/seed.js",
-    "postinstall": "prisma generate"
+    "postinstall": "node ./scripts/prisma-generate-with-retry.cjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

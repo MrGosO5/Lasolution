@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Le serveur d’application n’est pas joignable. Démarrez le backend (ex. `npm run backend:dev` sur le port 4000), ou définissez INTERNAL_AUTH_API_URL / AUTH_API_URL. Pour tester uniquement EmailJS en local : COMING_SOON_SKIP_BACKEND=true dans .env.local.",
+            "Le serveur d’application n’est pas joignable. En local : `npm run backend:dev` (port 4000). Sur Netlify (ou autre hébergeur) : définissez `AUTH_API_URL` ou `INTERNAL_AUTH_API_URL` vers l’URL HTTPS publique de l’API. Pour n’appeler que EmailJS sans backend : `COMING_SOON_SKIP_BACKEND=true` (variables d’environnement du site sur Netlify, ou `.env.local` en local).",
         },
         { status: 503 },
       );

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
+    "clean:next": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true}); console.log('removed .next')\"",
     "backend:install": "npm --prefix backend install",
     "backend:generate": "npm --prefix backend run db:generate",
     "backend:dev": "npm --prefix backend run dev",
