@@ -1,12 +1,17 @@
-import { ComingSoonVeigaSection } from "./site/components/ComingSoonVeiga";
+import Link from "next/link";
+import { Reveal } from "./site/components/Reveal";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export default async function AccueilPage() {
+  const session = await getServerSession(authOptions);
+  const isAuthed = Boolean(session?.user?.id);
+  const role = session?.user?.role;
+  const exampleHref = isAuthed && role === "client" ? "/mes-commandes" : "/connexion";
+  const exampleLabel = isAuthed && role === "client" ? "Voir mes commandes" : "Se connecter pour suivre";
+
   return (
     <main>
-      <ComingSoonVeigaSection />
-
-      {/* Ancien contenu conserve, temporairement desactive */}
-      {/*
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(900px_circle_at_20%_15%,rgba(195,35,83,0.20),transparent_55%),radial-gradient(700px_circle_at_80%_30%,rgba(99,102,241,0.18),transparent_55%),radial-gradient(800px_circle_at_50%_80%,rgba(236,72,153,0.12),transparent_55%)]" />
         <div className="mx-auto w-full max-w-6xl px-6 py-16 md:py-20 relative">
@@ -160,7 +165,6 @@ export default async function AccueilPage() {
           ))}
         </div>
       </section>
-      */}
     </main>
   );
 }
