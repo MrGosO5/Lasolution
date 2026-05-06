@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Reveal } from "./site/components/Reveal";
+import { SocialLinksRow } from "./site/components/SocialLinksRow";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { ComingSoonWaitlistForm } from "./coming-soon/ComingSoonWaitlistForm";
 
 export default async function AccueilPage() {
   const session = await getServerSession(authOptions);
@@ -32,23 +34,8 @@ export default async function AccueilPage() {
                   Faites vos achats ou envoyez un colis à vos proches en toute confiance, on s’occupe de tout.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    href="/coming-soon"
-                    className="group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--logo-red)]/20 transition-smooth bg-[var(--logo-red)] hover:bg-[var(--logo-red-dark)] active:scale-[0.99]"
-                  >
-                    Commencez maintenant
-                    <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5">
-                      →
-                    </span>
-                  </Link>
-                  <Link
-                    href="/expedier-un-colis"
-                    className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold text-gray-900 bg-white/70 ring-1 ring-black/5 shadow-sm transition-smooth hover:bg-white"
-                  >
-                    Expédier un colis
-                  </Link>
-                </div>
+                {/* CTA temporairement masqués */}
+                <SocialLinksRow className="pt-2" />
               </div>
             </Reveal>
 
@@ -62,10 +49,15 @@ export default async function AccueilPage() {
                       "Vous venez de valider un paiement de 25,00€ pour un achat de bluetooth sur Amazon",
                       "Commande expédiée : votre commande #12345 est en cours d’expédition",
                       "Paiement effectué : votre paiement de 52,00€ pour la commande #14578 a été validé",
-                    ].map((t) => (
+                    ].map((t, i) => (
                       <div
                         key={t}
-                        className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-gray-700 shadow-sm ring-1 ring-black/5"
+                        className={[
+                          "rounded-2xl bg-white/90 px-4 py-3 text-sm text-gray-700 shadow-sm ring-1 ring-black/5 transition-smooth",
+                          i === 0 ? "animate-float-slow" : "",
+                          i === 1 ? "animate-float-slow [animation-delay:800ms]" : "",
+                          i === 2 ? "animate-float-slow [animation-delay:1600ms]" : "",
+                        ].join(" ")}
                       >
                         {t}
                       </div>
@@ -100,6 +92,17 @@ export default async function AccueilPage() {
             </Reveal>
           ))}
         </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-6 pb-16">
+        <Reveal>
+          <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 shadow-sm p-6 md:p-10">
+            <ComingSoonWaitlistForm
+              withFrame={false}
+              className="mx-auto w-full max-w-[720px]"
+            />
+          </div>
+        </Reveal>
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-16">

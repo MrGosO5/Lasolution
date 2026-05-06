@@ -113,8 +113,18 @@ summary::-webkit-details-marker { display: none; }
   50% { opacity: 0.85; }
 }
 
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 .animate-fade-in {
   animation: fade-in 0.5s var(--ease-out) forwards;
+}
+
+.animate-float-slow {
+  animation: float-slow 6s var(--ease-out) infinite;
+  will-change: transform;
 }
 
 /* Reveal stagger delays (used by app/site/components/Reveal.tsx) */
