@@ -105,28 +105,7 @@ export default async function AccueilPage() {
         </Reveal>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 pb-16">
-        <Reveal>
-          <div className="rounded-3xl bg-gradient-to-br from-white/80 to-white/50 ring-1 ring-black/5 shadow-xl shadow-gray-200/40 p-8 md:p-10">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h3 className="text-xl md:text-2xl font-bold text-gray-900">
-                  Suivez votre commande jusqu’à la livraison
-                </h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  Faites vos achats ou envoyez un colis à vos proches en toute confiance, on s’occupe de tout.
-                </p>
-              </div>
-              <Link
-                href={exampleHref}
-                className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-black/15 transition-smooth hover:bg-black"
-              >
-                {exampleLabel}
-              </Link>
-            </div>
-          </div>
-        </Reveal>
-      </section>
+      {/* Bloc "Suivez votre commande..." temporairement masqué */}
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-20">
         <Reveal>
