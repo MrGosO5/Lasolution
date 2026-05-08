@@ -3,6 +3,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { AppRole } from "@/types/app-role";
 import { partnerPathByRole, roleForPartnerSpace } from "@/lib/partner-routes";
+import {
+  SITE_PREVIEW_COOKIE,
+  getSitePreviewSecret,
+  isSitePreviewBypassPath,
+  isSitePreviewEnabled,
+  isValidPreviewCookie,
+} from "@/lib/site-preview";
 
 const protectedAdmin = ["/dashboard"];
 const protectedClient = ["/espace-client"];
@@ -28,11 +35,27 @@ function redirectForRole(role: AppRole, base: URL): URL {
 }
 
 export async function middleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
+
+  if (isSitePreviewEnabled()) {
+    const previewSecret = getSitePreviewSecret();
+    if (previewSecret && !isSitePreviewBypassPath(path)) {
+      const cookie = req.cookies.get(SITE_PREVIEW_COOKIE)?.value;
+      if (!(await isValidPreviewCookie(cookie, previewSecret))) {
+        const login = new URL("/acces-preview", req.url);
+        login.searchParams.set(
+          "callbackUrl",
+          `${path}${req.nextUrl.search}`
+        );
+        return NextResponse.redirect(login);
+      }
+    }
+  }
+
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
   });
-  const path = req.nextUrl.pathname;
 
   const isAdminRoute = protectedAdmin.some((p) => path.startsWith(p));
   const isClientRoute = protectedClient.some((p) => path.startsWith(p));
@@ -83,29 +106,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-    "/espace-client",
-    "/espace-client/:path*",
-    "/partenaire",
-    "/partenaire/:path*",
-    "/compte",
-    "/compte/:path*",
-    "/mon-espace",
-    "/mon-espace/:path*",
-    "/mes-commandes",
-    "/mes-commandes/:path*",
-    "/missions",
-    "/missions/:path*",
-    "/notifications",
-    "/notifications/:path*",
-    "/parametres",
-    "/parametres/:path*",
-    "/carte",
-    "/carte/:path*",
-    "/prochain-voyage",
-    "/prochain-voyage/:path*",
-    "/checkout",
-    "/checkout/:path*",
+    /* Toutes les routes applicatives (hors assets) : portail SITE_PREVIEW_PASSWORD + garde NextAuth. */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };
