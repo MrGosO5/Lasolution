@@ -68,7 +68,7 @@ function SocialLinks({ className }: { className?: string }) {
       </motion.a>
       <motion.a
         href="#"
-        aria-label="X"
+        aria-label="Twitter"
         className={ring}
         whileHover={socialHover}
         whileTap={socialTap}

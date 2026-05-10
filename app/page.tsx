@@ -1,17 +1,8 @@
-import Link from "next/link";
 import { Reveal } from "./site/components/Reveal";
 import { SocialLinksRow } from "./site/components/SocialLinksRow";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { ComingSoonWaitlistForm } from "./coming-soon/ComingSoonWaitlistForm";
 
-export default async function AccueilPage() {
-  const session = await getServerSession(authOptions);
-  const isAuthed = Boolean(session?.user?.id);
-  const role = session?.user?.role;
-  const exampleHref = isAuthed && role === "client" ? "/mes-commandes" : "/connexion";
-  const exampleLabel = isAuthed && role === "client" ? "Voir mes commandes" : "Se connecter pour suivre";
-
+export default function AccueilPage() {
   return (
     <main>
       <section className="relative overflow-hidden">

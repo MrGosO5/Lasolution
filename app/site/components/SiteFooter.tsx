@@ -10,7 +10,7 @@ export async function SiteFooter() {
   const isClient = role === "client";
   const isAdmin = role === "admin";
   const accountHref = isAdmin ? "/dashboard" : isAuthed ? "/mon-espace" : "/connexion";
-  const accountLabel = isAdmin ? "Dashboard" : isAuthed ? "Mon espace" : "Se connecter";
+  const accountLabel = isAdmin ? "Tableau de bord" : isAuthed ? "Mon espace" : "Se connecter";
 
   return (
     <footer className="mt-16 border-t border-black/5 bg-white/60 backdrop-blur-sm">

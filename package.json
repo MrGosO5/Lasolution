@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "start:dev": "powershell -ExecutionPolicy Bypass -File .\\start-dev.ps1",
+    "start:docker": "powershell -ExecutionPolicy Bypass -File .\\start-docker.ps1",
     "dev": "next dev -p 3001",
     "clean:next": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true}); console.log('removed .next')\"",
     "backend:install": "npm --prefix backend install",

@@ -143,13 +143,14 @@ export function ComingSoonWaitlistForm({ withFrame = true, className }: ComingSo
                         {tab === "buyer" ? (
                           <label className="flex flex-col gap-2 text-left">
                             <span className="text-base font-semibold leading-[22px] text-black">{C.form.urlLabel}</span>
-                            <input
+                            <textarea
                               required
                               name="articleUrl"
-                              type="url"
-                              className="box-border h-[46px] w-full rounded-lg border border-[#999999] bg-white px-3 text-base text-gray-900 outline-none focus:ring-2 focus:ring-[#C32353]/25"
+                              rows={4}
+                              className="box-border min-h-[104px] w-full resize-y rounded-lg border border-[#999999] bg-white px-3 py-3 text-base text-gray-900 outline-none focus:ring-2 focus:ring-[#C32353]/25"
                               placeholder={C.form.urlPlaceholder}
                             />
+                            <span className="text-xs leading-5 text-gray-500">Ajoutez un lien par ligne.</span>
                           </label>
                         ) : null}
 

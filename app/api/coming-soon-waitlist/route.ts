@@ -13,6 +13,14 @@ function skipBackendForComingSoon(): boolean {
   return v === "1" || v === "true" || v === "yes";
 }
 
+function articleLinksFrom(value: unknown): string[] {
+  return String(value ?? "")
+    .slice(0, 4000)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
   try {
@@ -21,13 +29,39 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
+  const profile = String(body.profile ?? "").trim().toLowerCase() === "pro" ? "pro" : "buyer";
+  const articleLinks = profile === "buyer" ? articleLinksFrom(body.articleUrl) : [];
+
+  if (profile === "buyer") {
+    if (articleLinks.length === 0) {
+      return NextResponse.json(
+        { error: "Au moins une URL d’article est requise pour l’achat assisté." },
+        { status: 400 },
+      );
+    }
+
+    for (const link of articleLinks) {
+      try {
+        const url = new URL(link);
+        if (url.protocol !== "http:" && url.protocol !== "https:") {
+          return NextResponse.json(
+            { error: "URL d’article invalide (http ou https requis)." },
+            { status: 400 },
+          );
+        }
+      } catch {
+        return NextResponse.json({ error: `URL d’article invalide : ${link}` }, { status: 400 });
+      }
+    }
+  }
+
   const payload = {
-    profile: String(body.profile ?? "").trim().toLowerCase(),
+    profile,
     name: String(body.name ?? "").trim(),
     email: String(body.email ?? "").trim(),
     phoneDial: String(body.phoneDial ?? "").trim(),
     phone: String(body.phone ?? "").trim(),
-    articleUrl: String(body.articleUrl ?? "").trim(),
+    articleUrl: articleLinks.join("\n"),
   };
 
   let data: { error?: string; ok?: boolean };

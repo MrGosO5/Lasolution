@@ -12,12 +12,12 @@ export async function SiteHeader() {
   const isAdmin = role === "admin";
 
   const accountHref = isAdmin ? "/dashboard" : "/mon-espace";
-  const accountLabel = isAdmin ? "Dashboard" : "Mon espace";
+  const accountLabel = isAdmin ? "Tableau de bord" : "Mon espace";
 
   return (
     <header className="sticky top-0 z-40 border-b border-black/5 bg-white/60 backdrop-blur-md">
       <div className="site-container flex items-center justify-between py-4">
-        <Link href="/" className="focus-ring rounded-xl">
+        <Link href="/" className="focus-ring shrink-0 rounded-xl">
           <span className="sr-only">La Solution</span>
           <Logo />
         </Link>

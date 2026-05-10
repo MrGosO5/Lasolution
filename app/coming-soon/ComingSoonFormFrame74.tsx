@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 /**
- * Figma Property 1 = Frame 74 : fond #FFEAEA, radius 32px, filigranes LOGO-SOLUTION-DECL + LOGO-SOLUTION @ 15 %.
+ * Figma Property 1 = Frame 74 : fond #FFEAEA, radius 32px, filigranes logo @ 15 %.
  * Le calque filigrane est en overflow:hidden pour ne pas couper le dropdown téléphone (shell en overflow-visible).
  */
 const W = 923;
@@ -49,7 +49,7 @@ export function ComingSoonFormFrame74({ children }: { children: ReactNode }) {
               backgroundImage:
                 m.kind === "decl"
                   ? "url(/icon/LOGO-SOLUTION-DECL.png)"
-                  : "url(/icon/LOGO-SOLUTION.png)",
+                  : "url(/icon/LOGO-SOLUTION-DECL.png)",
             }}
           />
         ))}

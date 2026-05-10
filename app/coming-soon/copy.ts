@@ -80,9 +80,9 @@ export const comingSoonCopy = {
     tabPro: "Expédition de colis",
     /** Figma Frame 74 — onglet « Achat assisté » */
     instruction:
-      "Veuillez renseigner les informations de votre article récupérée depuis la boutique (ex: Alibaba, Temu, AliExpress ou autre)",
-    urlLabel: "L'Url de votre article",
-    urlPlaceholder: "https://…",
+      "Veuillez renseigner les liens de vos articles récupérés depuis la boutique (ex: Alibaba, Temu, AliExpress ou autre)",
+    urlLabel: "Lien(s) de vos articles",
+    urlPlaceholder: "https://...\nhttps://...",
     nameLabel: "Nom & Prénom",
     namePlaceholder: "Jean Dupont",
     emailLabel: "Email",
