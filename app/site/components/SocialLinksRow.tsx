@@ -29,7 +29,7 @@ const socialLinks: SocialLink[] = [
     icon: <Linkedin className="h-5 w-5" aria-hidden />,
   },
   {
-    label: "X",
+    label: "Twitter",
     href: "https://x.com/La__solution",
     icon: <span className="text-[15px] font-black leading-none" aria-hidden>𝕏</span>,
   },

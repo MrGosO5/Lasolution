@@ -321,13 +321,19 @@ function setupPublicComingSoonWaitlistRoute(app) {
     const prisma = getPrisma();
     const body = req.body || {};
     const clean = (s, max) => (typeof s === "string" ? s.trim().slice(0, max) : "");
+    const articleLinksFrom = (value) =>
+      clean(value, 4000)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
     const profileRaw = clean(body.profile, 20).toLowerCase();
     const profile = profileRaw === "pro" ? "pro" : profileRaw === "buyer" ? "buyer" : "";
     const name = clean(body.name, 200);
     const email = clean(body.email, 320).toLowerCase();
     const phoneDial = clean(body.phoneDial, 12);
     const phoneLocal = clean(body.phone, 40);
-    let articleUrl = clean(body.articleUrl, 2000);
+    let articleLinks = articleLinksFrom(body.articleUrl);
+    let articleUrl = articleLinks.join("\n");
 
     if (!profile) {
       return res.status(400).json({ error: "Profil invalide (buyer ou pro attendu)." });
@@ -342,18 +348,22 @@ function setupPublicComingSoonWaitlistRoute(app) {
       return res.status(400).json({ error: "Indicatif téléphonique invalide." });
     }
     if (profile === "buyer") {
-      if (!articleUrl) {
-        return res.status(400).json({ error: "L’URL de l’article est requise pour l’achat assisté." });
+      if (articleLinks.length === 0) {
+        return res.status(400).json({ error: "Au moins une URL d’article est requise pour l’achat assisté." });
       }
-      try {
-        const u = new URL(articleUrl);
-        if (!u.protocol.startsWith("http")) {
-          return res.status(400).json({ error: "URL d’article invalide (http ou https requis)." });
+      for (const link of articleLinks) {
+        try {
+          const u = new URL(link);
+          if (u.protocol !== "http:" && u.protocol !== "https:") {
+            return res.status(400).json({ error: "URL d’article invalide (http ou https requis)." });
+          }
+        } catch {
+          return res.status(400).json({ error: `URL d’article invalide : ${link}` });
         }
-      } catch {
-        return res.status(400).json({ error: "URL d’article invalide." });
       }
+      articleUrl = articleLinks.join("\n");
     } else {
+      articleLinks = [];
       articleUrl = "";
     }
 
@@ -366,6 +376,7 @@ function setupPublicComingSoonWaitlistRoute(app) {
       profile,
       name,
       articleUrl: articleUrl || null,
+      articleLinks,
       phoneDial,
       phoneLocal,
       fullPhone,

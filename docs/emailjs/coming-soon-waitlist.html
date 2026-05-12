@@ -7,7 +7,7 @@
 
   Sujet suggéré : [Coming Soon] Achat assisté — {{name}}
 
-  Variables : profile_label, name, email, full_phone, article_url, submitted_at
+  Variables : profile_label, name, email, full_phone, article_url, article_url_html, article_count, submitted_at
 -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -69,8 +69,8 @@
                 </tr>
                 <tr>
                   <td class="cell" style="padding:14px 18px;border-bottom:1px solid rgba(195,35,83,0.12);">
-                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Lien article</p>
-                    <p style="margin:0;font-size:14px;word-break:break-all;line-height:1.5;color:#222222;"><a href="{{article_url}}" style="color:#d12e5e;">{{article_url}}</a></p>
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Lien(s) article(s)</p>
+                    <div style="margin:0;font-size:14px;line-height:1.5;color:#222222;">{{{article_url_html}}}</div>
                   </td>
                 </tr>
                 <tr>

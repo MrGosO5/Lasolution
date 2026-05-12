@@ -160,7 +160,7 @@ summary::-webkit-details-marker { display: none; }
 .chart-bar-43 { height: 43.75%; }
 .chart-bar-100 { height: 100%; }
 
-/* Page /coming-soon — hero Figma Frame 84 (tuiles LOGO-SOLUTION.png @ 5 %) */
+/* Page /coming-soon — hero Figma Frame 84 (tuiles du logo @ 5 %) */
 .coming-soon-hero-frame84-wrap {
   pointer-events: none;
   position: absolute;
@@ -204,7 +204,7 @@ summary::-webkit-details-marker { display: none; }
 
 .coming-soon-hero-g3-mark {
   position: absolute;
-  background-image: url("/icon/LOGO-SOLUTION.png");
+  background-image: url("/icon/LOGO-SOLUTION-DECL.png");
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
