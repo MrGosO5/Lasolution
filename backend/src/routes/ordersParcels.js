@@ -1,4 +1,5 @@
 const { Prisma } = require("@prisma/client");
+const { parseOptionalDate, syncOrderStatusFromParcels } = require("../lib/parcelWorkflow");
 const { requireAuth, requireRoles } = require("../middleware/auth");
 const { hashPassword, verifyPassword } = require("../auth/password");
 const crypto = require("crypto");
@@ -268,7 +269,16 @@ function setupOrderParcelRoutes(app, getPrisma) {
         orderBy: { createdAt: "desc" },
         include: {
           lines: true,
-          parcels: { select: { id: true, status: true, weightKg: true, createdAt: true } },
+          parcels: {
+            select: {
+              id: true,
+              status: true,
+              weightKg: true,
+              receivedAt: true,
+              shippedAt: true,
+              createdAt: true,
+            },
+          },
         },
       }),
     ]);
@@ -344,7 +354,19 @@ function setupOrderParcelRoutes(app, getPrisma) {
     const orderId = req.params.id;
     const raw = req.body?.status;
     const status = typeof raw === "string" ? raw.trim().toUpperCase() : "";
-    const allowed = ["AWAITING_PAYMENT", "PAID", "DELIVERED", "CANCELLED"];
+    const allowed = [
+      "AWAITING_PAYMENT",
+      "PAID",
+      "WAREHOUSE_RECEIVED",
+      "WEIGHT_CAPTURED",
+      "INVOICE_DRAFT",
+      "INVOICE_APPROVED",
+      "READY_TO_SHIP",
+      "SHIPPED",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+      "CANCELLED",
+    ];
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: `status invalide (autorisés : ${allowed.join(", ")}).` });
     }
@@ -777,35 +799,298 @@ function setupOrderParcelRoutes(app, getPrisma) {
     res.status(201).json(created);
   });
 
+  /** Réception physique à l’entrepôt (lot 1) : dates + statut + tracking + sync commande. */
+  app.post("/parcels/:id/warehouse-receipt", ...adminOnly, async (req, res) => {
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const parcelId = req.params.id;
+    const receivedAt = parseOptionalDate(req.body?.receivedAt);
+    if (!receivedAt) {
+      return res.status(400).json({ error: "receivedAt invalide (ISO 8601 attendu)." });
+    }
+
+    try {
+      const { idempotent } = await prisma.$transaction(async (tx) => {
+        const parcel = await tx.parcel.findUnique({
+          where: { id: parcelId },
+          include: { order: true },
+        });
+        if (!parcel) {
+          const e = new Error("Colis introuvable.");
+          e.status = 404;
+          throw e;
+        }
+        const order = parcel.order;
+        if (!order) {
+          const e = new Error("Commande introuvable.");
+          e.status = 404;
+          throw e;
+        }
+
+        const oSt = String(order.status || "").toUpperCase();
+        if (oSt === "CANCELLED") {
+          const e = new Error("Commande annulée.");
+          e.status = 409;
+          throw e;
+        }
+        if (oSt === "AWAITING_PAYMENT") {
+          const e = new Error("La commande doit être en PAID avant réception entrepôt.");
+          e.status = 409;
+          throw e;
+        }
+
+        if (parcel.receivedAt && String(parcel.status || "").toUpperCase() === "WAREHOUSE_RECEIVED") {
+          return { idempotent: true };
+        }
+
+        const pSt = String(parcel.status || "").toUpperCase();
+        if (["SHIPPED", "DELIVERED", "OUT_FOR_DELIVERY"].includes(pSt)) {
+          const e = new Error("Colis déjà expédié ou livré.");
+          e.status = 409;
+          throw e;
+        }
+
+        const p2 = await tx.parcel.update({
+          where: { id: parcelId },
+          data: {
+            receivedAt,
+            status: "WAREHOUSE_RECEIVED",
+          },
+        });
+
+        await tx.trackingEvent.create({
+          data: {
+            parcelId,
+            status: "WAREHOUSE_RECEIVED",
+            message: "Réception confirmée à l’entrepôt",
+            meta: { receivedAt: receivedAt.toISOString() },
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: req.auth.sub,
+            action: "parcel.warehouse_receipt",
+            entityType: "Parcel",
+            entityId: parcelId,
+            before: { receivedAt: parcel.receivedAt, status: parcel.status },
+            after: { receivedAt: receivedAt.toISOString(), status: "WAREHOUSE_RECEIVED" },
+          },
+        });
+
+        await syncOrderStatusFromParcels(tx, order.id, req.auth.sub);
+        return { idempotent: false };
+      });
+
+      const full = await prisma.parcel.findUnique({
+        where: { id: parcelId },
+        include: {
+          order: { select: { id: true, status: true } },
+          trackingEvents: { orderBy: { createdAt: "desc" }, take: 30 },
+        },
+      });
+      if (!full) {
+        return res.status(500).json({ error: "Colis introuvable après mise à jour." });
+      }
+      res.status(idempotent ? 200 : 201).json(full);
+    } catch (e) {
+      const status = e.status || 400;
+      res.status(status).json({ error: e.message || String(e) });
+    }
+  });
+
+  /** Expédition entrepôt (lot 1) : shippedAt + statut + tracking + sync commande. */
+  app.post("/parcels/:id/ship", ...adminOnly, async (req, res) => {
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const parcelId = req.params.id;
+    const shippedAt = parseOptionalDate(req.body?.shippedAt);
+    if (!shippedAt) {
+      return res.status(400).json({ error: "shippedAt invalide (ISO 8601 attendu)." });
+    }
+
+    const message =
+      typeof req.body?.message === "string" ? req.body.message.trim().slice(0, 400) : "";
+    const meta =
+      req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta) ? req.body.meta : {};
+
+    try {
+      let idempotent = false;
+      await prisma.$transaction(async (tx) => {
+        const parcel = await tx.parcel.findUnique({
+          where: { id: parcelId },
+          include: { order: true },
+        });
+        if (!parcel) {
+          const e = new Error("Colis introuvable.");
+          e.status = 404;
+          throw e;
+        }
+        const order = parcel.order;
+        if (!order) {
+          const e = new Error("Commande introuvable.");
+          e.status = 404;
+          throw e;
+        }
+
+        const oSt = String(order.status || "").toUpperCase();
+        if (oSt === "CANCELLED") {
+          const e = new Error("Commande annulée.");
+          e.status = 409;
+          throw e;
+        }
+
+        if (!parcel.receivedAt) {
+          const e = new Error("Réception entrepôt requise avant expédition.");
+          e.status = 409;
+          throw e;
+        }
+        const w = parcel.weightKg != null ? Number(parcel.weightKg) : NaN;
+        if (!Number.isFinite(w) || w <= 0) {
+          const e = new Error("Poids réel requis avant expédition.");
+          e.status = 409;
+          throw e;
+        }
+
+        const pSt = String(parcel.status || "").toUpperCase();
+        if (parcel.shippedAt && pSt === "SHIPPED") {
+          idempotent = true;
+          return;
+        }
+        if (["DELIVERED"].includes(pSt)) {
+          const e = new Error("Colis déjà livré.");
+          e.status = 409;
+          throw e;
+        }
+
+        await tx.parcel.update({
+          where: { id: parcelId },
+          data: {
+            shippedAt,
+            status: "SHIPPED",
+          },
+        });
+
+        const msg =
+          message ||
+          `Expédié le ${shippedAt.toISOString().slice(0, 10)}`;
+
+        await tx.trackingEvent.create({
+          data: {
+            parcelId,
+            status: "SHIPPED",
+            message: msg,
+            meta: { ...meta, shippedAt: shippedAt.toISOString() },
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: req.auth.sub,
+            action: "parcel.ship",
+            entityType: "Parcel",
+            entityId: parcelId,
+            before: { shippedAt: parcel.shippedAt, status: parcel.status },
+            after: { shippedAt: shippedAt.toISOString(), status: "SHIPPED" },
+          },
+        });
+
+        await syncOrderStatusFromParcels(tx, order.id, req.auth.sub);
+      });
+
+      const full = await prisma.parcel.findUnique({
+        where: { id: parcelId },
+        include: {
+          order: { select: { id: true, status: true } },
+          trackingEvents: { orderBy: { createdAt: "desc" }, take: 30 },
+        },
+      });
+      if (!full) {
+        return res.status(500).json({ error: "Colis introuvable après mise à jour." });
+      }
+      res.status(idempotent ? 200 : 201).json(full);
+    } catch (e) {
+      const status = e.status || 400;
+      res.status(status).json({ error: e.message || String(e) });
+    }
+  });
+
   app.patch("/parcels/:id", ...adminOnly, async (req, res) => {
     const prisma = getPrisma();
     if (!prisma) return res.status(503).json({ error: "Base indisponible." });
 
-    const { weightKg, status } = req.body || {};
-    const before = await prisma.parcel.findUnique({ where: { id: req.params.id } });
-    if (!before) return res.status(404).json({ error: "Colis introuvable." });
+    if (req.body?.status != null && req.body.status !== "") {
+      return res.status(400).json({
+        error:
+          "Le statut colis se pilote via POST /parcels/:id/warehouse-receipt ou POST /parcels/:id/ship.",
+      });
+    }
 
-    const data = {};
-    if (weightKg != null) data.weightKg = new Prisma.Decimal(String(weightKg));
-    if (status != null) data.status = String(status);
+    const { weightKg } = req.body || {};
+    if (weightKg == null) {
+      return res.status(400).json({ error: "weightKg requis." });
+    }
 
-    const updated = await prisma.parcel.update({
+    const before = await prisma.parcel.findUnique({
       where: { id: req.params.id },
-      data,
+      include: { order: { select: { id: true, status: true } } },
     });
+    if (!before) return res.status(404).json({ error: "Colis introuvable." });
+    const prevSt = String(before.status || "").toUpperCase();
+    if (["SHIPPED", "DELIVERED", "OUT_FOR_DELIVERY"].includes(prevSt)) {
+      return res.status(409).json({ error: "Impossible de modifier le poids après expédition." });
+    }
+    if (!before.receivedAt) {
+      return res.status(409).json({
+        error: "Réception entrepôt requise avant la pesée (POST /parcels/:id/warehouse-receipt).",
+      });
+    }
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: req.auth.sub,
-        action: "parcel.patch",
-        entityType: "Parcel",
-        entityId: updated.id,
-        before: { weightKg: before.weightKg?.toString(), status: before.status },
-        after: { weightKg: updated.weightKg?.toString(), status: updated.status },
-      },
-    });
+    const wNum = Number(weightKg);
+    if (!Number.isFinite(wNum) || wNum <= 0) {
+      return res.status(400).json({ error: "weightKg doit être un nombre strictement positif." });
+    }
 
-    res.json(updated);
+    try {
+      const updated = await prisma.$transaction(async (tx) => {
+        const p = await tx.parcel.update({
+          where: { id: req.params.id },
+          data: {
+            weightKg: new Prisma.Decimal(String(weightKg)),
+            status: "WEIGHT_CAPTURED",
+          },
+        });
+
+        await tx.trackingEvent.create({
+          data: {
+            parcelId: req.params.id,
+            status: "WEIGHT_CAPTURED",
+            message: `Poids enregistré : ${weightKg} kg`,
+            meta: { weightKg: String(weightKg) },
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: req.auth.sub,
+            action: "parcel.weight_updated",
+            entityType: "Parcel",
+            entityId: p.id,
+            before: { weightKg: before.weightKg?.toString(), status: before.status },
+            after: { weightKg: p.weightKg?.toString(), status: p.status },
+          },
+        });
+
+        await syncOrderStatusFromParcels(tx, before.orderId, req.auth.sub);
+        return p;
+      });
+
+      res.json(updated);
+    } catch (e) {
+      res.status(400).json({ error: String(e.message || e) });
+    }
   });
 }
 

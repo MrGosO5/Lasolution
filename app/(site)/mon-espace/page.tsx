@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
+import { SiteSignOutButton } from "@/app/site/components/SiteSignOutButton";
 import { ClientEspaceHub } from "@/app/site/components/ClientEspaceHub";
 import { SoluPackerEspaceHub } from "@/app/site/components/SoluPackerEspaceHub";
 import { PartnerEspaceHub } from "@/app/site/components/PartnerEspaceHub";
@@ -64,9 +65,7 @@ export default async function MonEspacePage() {
             title="Mon espace"
             subtitle="Commandes, profil, carte et paramètres au même endroit."
             right={
-              <Link href="/api/auth/signout?callbackUrl=/" className="btn btn-ghost">
-                Déconnexion
-              </Link>
+              <SiteSignOutButton className="btn btn-ghost">Déconnexion</SiteSignOutButton>
             }
           />
         </Reveal>
@@ -84,9 +83,7 @@ export default async function MonEspacePage() {
             title="Mon espace"
             subtitle="Déclarez vos trajets, gérez vos missions et suivez vos commissions."
             right={
-              <Link href="/api/auth/signout?callbackUrl=/" className="btn btn-ghost">
-                Déconnexion
-              </Link>
+              <SiteSignOutButton className="btn btn-ghost">Déconnexion</SiteSignOutButton>
             }
           />
         </Reveal>
@@ -104,9 +101,7 @@ export default async function MonEspacePage() {
             title="Mon espace"
             subtitle="Accédez à votre espace dédié et à vos notifications."
             right={
-              <Link href="/api/auth/signout?callbackUrl=/" className="btn btn-ghost">
-                Déconnexion
-              </Link>
+              <SiteSignOutButton className="btn btn-ghost">Déconnexion</SiteSignOutButton>
             }
           />
         </Reveal>

@@ -129,6 +129,37 @@ export function CommandeDetailClient({
     }
   }
 
+  async function saveWarehouseReceipt() {
+    setParcelError(null);
+    const parcelId = selectedParcel?.id || "";
+    if (!parcelId) {
+      setParcelError("Aucun colis associé à cette commande.");
+      return;
+    }
+    if (String(data.rawApiStatus || "").toUpperCase() === "AWAITING_PAYMENT") {
+      setParcelError("Validez d’abord le paiement (commande en PAID).");
+      return;
+    }
+    setParcelLoading(true);
+    try {
+      const res = await fetch(`/api/admin/parcels/${encodeURIComponent(parcelId)}/warehouse-receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setParcelError(json.error || `Erreur ${res.status}`);
+        return;
+      }
+      await refreshFromApi();
+    } catch {
+      setParcelError("Réseau indisponible.");
+    } finally {
+      setParcelLoading(false);
+    }
+  }
+
   async function saveParcelWeight() {
     setParcelError(null);
     const parcelId = selectedParcel?.id || "";
@@ -154,12 +185,7 @@ export function CommandeDetailClient({
         setParcelError(json.error || `Erreur ${res.status}`);
         return;
       }
-      const next = typeof json.weightKg === "string" ? json.weightKg : String(weight);
-      setData((prev) => ({
-        ...prev,
-        parcels: prev.parcels.map((p) => (p.id === parcelId ? { ...p, weightKg: next } : p)),
-        poidsEstime: `${Number(next).toLocaleString("fr-FR")} kg`,
-      }));
+      await refreshFromApi();
     } catch {
       setParcelError("Réseau indisponible.");
     } finally {
@@ -181,32 +207,22 @@ export function CommandeDetailClient({
     }
     setParcelLoading(true);
     try {
-      const res = await fetch(`/api/admin/parcels/${encodeURIComponent(parcelId)}/tracking-events`, {
+      const shippedIso = `${d}T12:00:00.000Z`;
+      const res = await fetch(`/api/admin/parcels/${encodeURIComponent(parcelId)}/ship`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "SHIPPED",
+          shippedAt: shippedIso,
           message: `Expédié le ${d}`,
           meta: { expeditionDate: d },
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as { error?: string; id?: string; status?: string; message?: string; createdAt?: string };
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         setParcelError(json.error || `Erreur ${res.status}`);
         return;
       }
-      const ev = {
-        id: String(json.id || crypto.randomUUID()),
-        status: String(json.status || "SHIPPED"),
-        message: String(json.message || `Expédié le ${d}`),
-        at: String(json.createdAt || new Date().toISOString()),
-      };
-      setData((prev) => ({
-        ...prev,
-        parcels: prev.parcels.map((p) =>
-          p.id === parcelId ? { ...p, trackingEvents: [ev, ...(p.trackingEvents || [])] } : p
-        ),
-      }));
+      await refreshFromApi();
     } catch {
       setParcelError("Réseau indisponible.");
     } finally {
@@ -357,6 +373,30 @@ export function CommandeDetailClient({
                 ))}
               </select>
             </label>
+            {selectedParcel?.receivedAt ? (
+              <p className="text-xs text-figma-adminSub">
+                Réception entrepôt :{" "}
+                {formatEventDate(selectedParcel.receivedAt)}
+              </p>
+            ) : null}
+            {selectedParcel?.shippedAt ? (
+              <p className="text-xs text-figma-adminSub">
+                Expédition : {formatEventDate(selectedParcel.shippedAt)}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              disabled={
+                parcelLoading ||
+                !selectedParcel?.id ||
+                Boolean(selectedParcel?.receivedAt) ||
+                String(data.rawApiStatus || "").toUpperCase() === "AWAITING_PAYMENT"
+              }
+              onClick={() => void saveWarehouseReceipt()}
+              className="rounded-lg border border-figma-tableBorder bg-white px-3 py-2 text-xs font-medium text-figma-headerTitle hover:bg-figma-tableHeader disabled:opacity-60"
+            >
+              {parcelLoading ? "Enregistrement…" : "Confirmer réception entrepôt"}
+            </button>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-figma-adminSub">
                 Poids du colis (réel, une fois récupéré à l&apos;entrepôt)

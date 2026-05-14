@@ -2,24 +2,44 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { signIn, getSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { signIn, getSession, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { TextInput } from "@/app/site/components/Form";
 import { PageHeader } from "@/app/site/components/UI";
-import { partnerPathByRole } from "@/lib/partner-routes";
+import {
+  applyRoleToDefaultHub,
+  sanitizeSiteLoginCallback,
+} from "@/lib/site-login-redirect";
 import type { AppRole } from "@/types/app-role";
 
 export default function ConnexionSitePage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/mon-espace";
+  const { data: session, status } = useSession();
   const justRegistered = searchParams.get("registered") === "1";
   const justReset = searchParams.get("reset") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const didRedirectAuthed = useRef(false);
+
+  const callbackRaw = searchParams.get("callbackUrl");
+  const userId = session?.user?.id;
+  const userRole = session?.user?.role as AppRole | undefined;
+
+  useEffect(() => {
+    if (status !== "authenticated" || !userId || didRedirectAuthed.current) return;
+    didRedirectAuthed.current = true;
+    const origin = window.location.origin;
+    const dest = applyRoleToDefaultHub(
+      sanitizeSiteLoginCallback(callbackRaw, origin),
+      userRole
+    );
+    window.location.replace(dest);
+  }, [status, userId, userRole, callbackRaw]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,19 +59,19 @@ export default function ConnexionSitePage() {
         return;
       }
 
-      const session = await getSession();
-      const role = session?.user?.role as AppRole | undefined;
+      router.refresh();
+      await new Promise<void>((r) => {
+        queueMicrotask(r);
+      });
+      const sessionAfter = await getSession();
+      const role = sessionAfter?.user?.role as AppRole | undefined;
 
-      // Par défaut, le "site" renvoie sur /mon-espace, mais on respecte callbackUrl si présent.
-      let destination = callbackUrl;
-      if (!callbackUrl || callbackUrl === "/") destination = "/mon-espace";
-
-      // Si un rôle est connu et qu'on vient d'un callbackUrl générique, on peut rediriger vers l'espace approprié.
-      if (destination === "/mon-espace") {
-        if (role === "admin") destination = "/dashboard";
-        else if (role === "client") destination = "/espace-client";
-        else if (role && partnerPathByRole[role]) destination = partnerPathByRole[role]!;
-      }
+      const origin = window.location.origin;
+      const raw = searchParams.get("callbackUrl");
+      const destination = applyRoleToDefaultHub(
+        sanitizeSiteLoginCallback(raw, origin),
+        role
+      );
 
       window.location.href = destination;
     } catch {

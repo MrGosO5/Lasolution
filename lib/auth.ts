@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import type { AppRole } from "@/types/app-role";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { getNextAuthSecret } from "@/lib/nextauth-secret";
 
 const AUTH_API_URL = process.env.AUTH_API_URL ?? "http://localhost:4000";
 
@@ -90,5 +91,5 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 jours
   },
-  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-en-production",
+  secret: getNextAuthSecret(),
 };

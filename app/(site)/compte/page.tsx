@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
+import { SiteSignOutButton } from "@/app/site/components/SiteSignOutButton";
 
 export default async function ComptePage() {
   const session = await getServerSession(authOptions);
@@ -22,9 +23,7 @@ export default async function ComptePage() {
           subtitle="Gérez votre profil, suivez vos commandes et retrouvez vos réglages."
           right={
             session?.user?.id ? (
-              <Link href="/api/auth/signout?callbackUrl=/" className="btn btn-ghost">
-                Déconnexion
-              </Link>
+              <SiteSignOutButton className="btn btn-ghost">Déconnexion</SiteSignOutButton>
             ) : (
               <Link href="/connexion" className="btn btn-primary">
                 Se connecter

@@ -2,6 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { AppRole } from "@/types/app-role";
+import { getNextAuthSecret } from "@/lib/nextauth-secret";
 import { partnerPathByRole, roleForPartnerSpace } from "@/lib/partner-routes";
 import {
   SITE_PREVIEW_COOKIE,
@@ -25,6 +26,14 @@ const protectedSite = [
   "/checkout",
 ];
 const protectedPacker = ["/missions"];
+
+/** Aligné sur la requête réelle : si NEXTAUTH_URL est en https mais le dev en http, getToken doit lire le bon cookie. */
+function secureCookieForRequest(req: NextRequest): boolean {
+  const forwarded = req.headers.get("x-forwarded-proto");
+  if (forwarded === "https") return true;
+  if (forwarded === "http") return false;
+  return req.nextUrl.protocol === "https:";
+}
 
 function redirectForRole(role: AppRole, base: URL): URL {
   if (role === "admin") return new URL("/dashboard", base);
@@ -54,8 +63,32 @@ export async function middleware(req: NextRequest) {
 
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: getNextAuthSecret(),
+    secureCookie: secureCookieForRequest(req),
   });
+
+  /** Session déjà active : éviter d’afficher le formulaire sous le header « connecté ». */
+  if (token && (path === "/connexion" || path === "/login")) {
+    const role = token.role as AppRole | undefined;
+    const knownRoles: AppRole[] = [
+      "admin",
+      "client",
+      "relais",
+      "solupacker",
+      "solu_livreur",
+      "ambassadeur",
+    ];
+    if (role && knownRoles.includes(role)) {
+      const dest = redirectForRole(role, req.nextUrl);
+      if (dest.pathname !== "/connexion" && dest.pathname !== "/login") {
+        return NextResponse.redirect(dest);
+      }
+    }
+    // Cookie de session valide mais rôle absent / inconnu, ou redirectForRole a renvoyé login — sortir de la page login
+    if (token.sub || token.email) {
+      return NextResponse.redirect(new URL("/mon-espace", req.nextUrl));
+    }
+  }
 
   const isAdminRoute = protectedAdmin.some((p) => path.startsWith(p));
   const isClientRoute = protectedClient.some((p) => path.startsWith(p));

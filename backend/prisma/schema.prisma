@@ -165,6 +165,10 @@ model Parcel {
   order            Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   status           String
   weightKg         Decimal?         @db.Decimal(10, 3)
+  /// Réception physique à l’entrepôt (lot 1 admin ops).
+  receivedAt       DateTime?
+  /// Passage en expédié côté entrepôt (lot 1 admin ops).
+  shippedAt        DateTime?
   deliveryCodeHash String?
   labelUrl         String?
   createdAt        DateTime         @default(now())

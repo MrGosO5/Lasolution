@@ -62,8 +62,11 @@ export default async function CommandesPage({
     const res = await lasolutionFetchJson<OrdersListResponse>(`/orders?${qs.toString()}`);
     rows = (res.data || []).map(mapApiOrderToRow);
     pagination = res.pagination || pagination;
-  } catch {
-    loadError = "Impossible de charger les commandes (session ou API).";
+  } catch (e) {
+    loadError =
+      e instanceof Error
+        ? `Impossible de charger les commandes — ${e.message}`
+        : "Impossible de charger les commandes (session ou API).";
   }
 
   try {

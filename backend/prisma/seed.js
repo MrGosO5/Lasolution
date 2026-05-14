@@ -1,6 +1,14 @@
 const { PrismaClient } = require("@prisma/client");
+const { hashPassword } = require("../src/auth/password");
 
 const prisma = new PrismaClient();
+
+/** Même logique que `backend/src/server.js` : le login accepte soit ces secrets, soit `User.passwordHash`. */
+const demoPasswords = {
+  admin: process.env.ADMIN_PASSWORD || "adminlasolution@x",
+  client: process.env.CLIENT_PASSWORD || "client",
+  partner: process.env.PARTNER_PASSWORD || "partner",
+};
 
 async function main() {
   const countries = [
@@ -33,19 +41,57 @@ async function main() {
   });
 
   const users = [
-    { id: "admin-1", email: "adminlasolution@gmail.com", name: "Administrateur", role: "admin" },
-    { id: "client-demo", email: "client@lasolution.demo", name: "Client démo", role: "client" },
-    { id: "relais-1", email: "relais@lasolution.demo", name: "Partenaire Relais", role: "relais" },
-    { id: "packer-1", email: "packer@lasolution.demo", name: "Solupacker", role: "solupacker" },
-    { id: "livreur-1", email: "livreur@lasolution.demo", name: "Solu livreur", role: "solu_livreur" },
-    { id: "amb-1", email: "ambassadeur@lasolution.demo", name: "Ambassadeur", role: "ambassadeur" },
+    {
+      id: "admin-1",
+      email: "adminlasolution@gmail.com",
+      name: "Administrateur",
+      role: "admin",
+      plainPassword: demoPasswords.admin,
+    },
+    {
+      id: "client-demo",
+      email: "client@lasolution.demo",
+      name: "Client démo",
+      role: "client",
+      plainPassword: demoPasswords.client,
+    },
+    {
+      id: "relais-1",
+      email: "relais@lasolution.demo",
+      name: "Partenaire Relais",
+      role: "relais",
+      plainPassword: demoPasswords.partner,
+    },
+    {
+      id: "packer-1",
+      email: "packer@lasolution.demo",
+      name: "Solupacker",
+      role: "solupacker",
+      plainPassword: demoPasswords.partner,
+    },
+    {
+      id: "livreur-1",
+      email: "livreur@lasolution.demo",
+      name: "Solu livreur",
+      role: "solu_livreur",
+      plainPassword: demoPasswords.partner,
+    },
+    {
+      id: "amb-1",
+      email: "ambassadeur@lasolution.demo",
+      name: "Ambassadeur",
+      role: "ambassadeur",
+      plainPassword: demoPasswords.partner,
+    },
   ];
 
   for (const u of users) {
+    const { plainPassword, ...rest } = u;
+    const passwordHash = hashPassword(plainPassword);
     await prisma.user.upsert({
       where: { id: u.id },
-      update: { email: u.email, name: u.name, role: u.role },
-      create: u,
+      update: { email: rest.email, name: rest.name, role: rest.role, passwordHash },
+      create: { ...rest, passwordHash },
     });
   }
 

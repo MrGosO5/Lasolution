@@ -13,6 +13,26 @@ Ce document décrit la cible du backoffice admin pour les opérations LaSolution
 
 Il part de l'état réel du projet et détaille l'architecture à mettre en place ensuite.
 
+**Voir aussi** — passation pour le dev front (seeds, env, routes API, proxies Next, flux réception / poids / expédition) : [`admin-orders-frontend-handoff.md`](./admin-orders-frontend-handoff.md).
+
+## Avancement implémenté (commandes / colis — lot 1)
+
+Les éléments suivants sont **déjà en place** dans le dépôt (backend + Prisma + proxies Next partiels) :
+
+| Domaine | Détail |
+|--------|--------|
+| **Schéma `Parcel`** | Champs `receivedAt`, `shippedAt` (migration Prisma) ; `weightKg`, `status`, `labelUrl` inchangés. |
+| **Workflow colis** | `backend/src/lib/parcelWorkflow.js` — `syncOrderStatusFromParcels` fait monter `Order.status` vers `WAREHOUSE_RECEIVED`, `WEIGHT_CAPTURED`, `SHIPPED` selon l’état de **tous** les colis (sans rétrograde inutile). |
+| **API Express** (`ordersParcels.js`) | `POST /parcels/:id/warehouse-receipt` (body `receivedAt`), `PATCH /parcels/:id` (**uniquement** `weightKg`, après réception), `POST /parcels/:id/ship` (`shippedAt`, `message?`, `meta?`), `POST /parcels/:id/tracking-events` ; garde-fous 409 (ex. pas de réception avant poids, pas d’expédition sans poids). |
+| **Statuts commande (admin)** | `PATCH /orders/:id` avec liste étendue (`WAREHOUSE_RECEIVED`, `WEIGHT_CAPTURED`, `INVOICE_DRAFT`, … — voir code `allowed`). |
+| **Proxies Next (admin)** | `app/api/admin/orders/[id]/route.ts` ; `app/api/admin/parcels/[id]/route.ts` ; `…/parcels/[id]/warehouse-receipt/route.ts` ; `…/parcels/[id]/ship/route.ts` ; `…/parcels/[id]/tracking-events/route.ts`. |
+| **Seeds de démo** | `backend/prisma/seed-demo-orders.js` + script `npm run db:seed:demo-orders` (commandes `order-demo-*`, colis `parcel-demo-*`). |
+| **Auth / site** | Déconnexion sans page NextAuth intermédiaire (`SiteSignOutButton`, `signOut({ callbackUrl: "/connexion" })`) ; middleware : utilisateur déjà connecté redirigé depuis `/connexion` et `/login` ; illustration `public/icon/auth-illustration.svg`. |
+
+**Reste à faire côté UI admin** : brancher explicitement les boutons « réception entrepôt », « expédition » et l’affichage de `receivedAt` / `shippedAt` sur le détail commande (une partie peut encore passer par d’anciens flux) ; voir la checklist dans le document de passation.
+
+---
+
 ## Etat actuel du projet
 
 ### Stack existante
@@ -96,26 +116,31 @@ Il existe déjà des routes ou briques pour :
 
 - lister les commandes ;
 - consulter le détail d'une commande ;
-- modifier le statut d'une commande ;
-- modifier le poids/statut d'un colis ;
-- ajouter un événement de tracking ;
+- modifier le statut d'une commande (**liste étendue** côté admin, voir `PATCH /orders/:id`) ;
+- **réception entrepôt** (`POST /parcels/:id/warehouse-receipt`) + **pesée** (`PATCH /parcels/:id` avec `weightKg` uniquement) + **expédition** (`POST /parcels/:id/ship` avec `shippedAt` + `TrackingEvent`) ;
+- ajouter un événement de tracking manuel (`POST /parcels/:id/tracking-events`) ;
 - créer une facture Zoho en brouillon via un stub ;
 - approuver une facture Zoho via un stub ;
-- créer une expédition transporteur via un `CarrierAdapter` stub ;
+- créer une expédition transporteur via un `CarrierAdapter` stub (**route** `POST /carriers/shipment` — distincte du flux « ship entrepôt » ci-dessus) ;
 - envoyer certains emails transactionnels ;
-- enregistrer des logs d'audit.
+- enregistrer des logs d'audit sur les mutations colis / statut commande concernées.
+
+**Convention de chemins** : l’API Express **n’utilise pas** le préfixe `/admin` dans les URL ; le rôle est imposé par `requireRoles("admin")`. Les routes Next sous `app/api/admin/...` proxifient vers ces chemins (ex. `POST …/parcels/:id/ship` → backend `POST /parcels/:id/ship`).
 
 ### Limites actuelles
 
-Plusieurs éléments existent en interface mais ne sont pas encore pleinement persistés ou branchés :
+**Déjà couvert (résumé)** : réception / poids / date d’expédition persistée (`shippedAt` + événement), sync partielle du statut commande, proxies Next pour les actions colis listées en section « Avancement ».
 
+**Encore à faire ou partiel** :
+
+- **UI détail commande** : aligner tous les boutons sur les routes `warehouse-receipt`, `ship` et l’affichage des champs `receivedAt` / `shippedAt` (l’existant peut encore mélanger d’anciens flux « date d’expédition » via tracking uniquement).
 - la gestion des utilisateurs dans `UtilisateursTable` est encore en partie locale côté UI ;
 - la validation/rejet des demandes partenaires n'applique pas encore totalement la logique métier en base ;
 - la validation Zoho existe en stub mais n'est pas encore une intégration Zoho complète ;
-- l'étiquette d'expédition n'est pas encore générée et stockée de façon définitive ;
-- la date d'expédition est actuellement mieux représentée comme événement de tracking que comme champ métier persistant ;
+- **étiquette transporteur** : `CarrierAdapter` + `POST /carriers/shipment` — pas de proxy Next dédié ni workflow UI « créer étiquette » bout-en-bout ;
+- route dédiée **`POST /admin/orders/:id/corrections`** (et UI) : non implémentée ; corrections client restent à formaliser ;
 - la communication admin ciblée n'a pas encore de module complet ;
-- les statuts existants dans certaines interfaces sont simplifiés par rapport au workflow cible.
+- champs **`User.status` / désactivation** et **`UserApplication.reviewedAt`** : non ajoutés au schéma (voir section Base de données ci-dessous).
 
 ## Objectif fonctionnel
 
@@ -210,22 +235,28 @@ Elle doit contenir des blocs d'action :
 
 ### API Next admin
 
-Les routes Next sous `app/api/admin/...` doivent servir de proxy sécurisé :
+Les routes Next sous `app/api/admin/...` servent de proxy sécurisé (session + rôle `admin` + `accessToken` → backend).
+
+**Déjà présentes (commandes / colis)** :
 
 ```text
 app/api/admin/
-  orders/[id]/route.ts
-  orders/[id]/status/route.ts
+  orders/[id]/route.ts          → GET /orders/:id, PATCH /orders/:id
+  parcels/[id]/route.ts         → PATCH /parcels/:id
+  parcels/[id]/warehouse-receipt/route.ts → POST /parcels/:id/warehouse-receipt
+  parcels/[id]/ship/route.ts    → POST /parcels/:id/ship
+  parcels/[id]/tracking-events/route.ts → POST /parcels/:id/tracking-events
+```
+
+**À ajouter plus tard (cible doc)** :
+
+```text
   orders/[id]/corrections/route.ts
-  parcels/[id]/route.ts
-  parcels/[id]/warehouse-receipt/route.ts
-  parcels/[id]/shipment/route.ts
+  parcels/[id]/shipment/route.ts   → proxy vers POST /carriers/shipment (étiquette transporteur)
   parcels/[id]/label/route.ts
-  invoices/[id]/approve-zoho/route.ts
-  communications/route.ts
-  users/[id]/route.ts
-  applications/[id]/approve/route.ts
-  applications/[id]/reject/route.ts
+  invoices/...
+  communications/...
+  users/..., applications/...
 ```
 
 Chaque route Next doit :
@@ -257,9 +288,9 @@ Il est possible de commencer en ajoutant dans les fichiers existants, puis d'ext
 Chaque route admin doit suivre ce modèle :
 
 ```js
-const guard = [requireAuth, requireRoles("admin")];
+const adminOnly = [requireAuth, requireRoles("admin")];
 
-app.post("/admin/example", ...guard, async (req, res) => {
+app.post("/parcels/:id/warehouse-receipt", ...adminOnly, async (req, res) => {
   // 1. valider le payload
   // 2. charger l'état courant
   // 3. vérifier la transition métier
@@ -272,33 +303,18 @@ app.post("/admin/example", ...guard, async (req, res) => {
 
 ### Base de données
 
-La base couvre déjà beaucoup de besoins. Quelques ajustements sont recommandés.
+La base couvre déjà beaucoup de besoins. Les champs **`Parcel.receivedAt`** et **`Parcel.shippedAt`** sont **déjà en production dans le schéma** (plus une simple recommandation).
 
-#### Champs à ajouter ou confirmer
+#### Champs `Parcel` (état actuel schéma)
 
-Sur `Parcel` :
+Les champs suivants existent dans `backend/prisma/schema.prisma` :
 
-```prisma
-model Parcel {
-  id               String   @id @default(cuid())
-  orderId          String
-  status           String
-  weightKg         Decimal? @db.Decimal(10, 3)
-  deliveryCodeHash String?
-  labelUrl         String?
-  shippedAt        DateTime?
-  receivedAt       DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-```
+- `receivedAt`, `shippedAt` — réception et expédition côté entrepôt ;
+- `weightKg` — poids réel après réception ;
+- `status` — piloté par les routes `warehouse-receipt` et `ship` (pas via `PATCH` colis pour le statut) ;
+- `labelUrl` — pour étiquette transporteur (à brancher avec `CarrierAdapter`).
 
-Pourquoi :
-
-- `receivedAt` permet de savoir quand le colis est arrivé à l'entrepôt ;
-- `weightKg` existe déjà et sert au poids réel ;
-- `shippedAt` évite de dépendre uniquement d'un événement de tracking pour la date d'expédition ;
-- `labelUrl` existe déjà et doit pointer vers le PDF ou l'URL imprimable.
+#### Champs encore recommandés (non présents au schéma actuel)
 
 Sur `User` :
 
@@ -377,16 +393,17 @@ sequenceDiagram
 
   A->>UI: Ouvre la commande
   A->>UI: Confirme réception entrepôt
-  UI->>API: POST /admin/parcels/:id/warehouse-receipt
-  API->>DB: Parcel.receivedAt + status
+  UI->>API: POST /parcels/:id/warehouse-receipt
+  API->>DB: Parcel.receivedAt + status WAREHOUSE_RECEIVED
   API->>DB: TrackingEvent WAREHOUSE_RECEIVED
-  API->>DB: AuditLog
+  API->>DB: AuditLog + syncOrderStatusFromParcels
   A->>UI: Renseigne poids réel
-  UI->>API: PATCH /admin/parcels/:id
-  API->>DB: Parcel.weightKg
-  API->>DB: Order.status WEIGHT_CAPTURED si applicable
-  API->>DB: TrackingEvent WEIGHT_CAPTURED
-  API->>DB: AuditLog
+  UI->>API: PATCH /parcels/:id
+  API->>DB: Parcel.weightKg + status WEIGHT_CAPTURED + TrackingEvent + audit + sync commande si tous colis pesés
+  A->>UI: Enregistre expédition
+  UI->>API: POST /parcels/:id/ship
+  API->>DB: Parcel.shippedAt + status SHIPPED + TrackingEvent
+  API->>DB: AuditLog + sync commande
 ```
 
 Règles :
@@ -394,18 +411,29 @@ Règles :
 - le poids doit être supérieur à `0` ;
 - le poids doit être stocké en kilogrammes ;
 - si plusieurs colis existent, l'admin doit peser chaque colis séparément ;
-- la commande passe à `WEIGHT_CAPTURED` seulement quand tous les colis requis ont un poids.
+- la commande passe à `WEIGHT_CAPTURED` via **sync** seulement quand **tous** les colis ont un poids valide ; `SHIPPED` côté commande quand **tous** les colis ont `shippedAt`.
 
-Routes à prévoir :
+**Implémenté (Express + proxies Next)** — depuis le navigateur, appeler les routes **`/api/admin/...`** qui relaient vers :
 
-- `POST /admin/parcels/:id/warehouse-receipt`
-- `PATCH /admin/parcels/:id`
+| Action | Backend Express |
+|--------|-----------------|
+| Réception | `POST /parcels/:id/warehouse-receipt` |
+| Poids | `PATCH /parcels/:id` avec `{ "weightKg": <number> }` |
+| Expédition (date + statut) | `POST /parcels/:id/ship` avec `{ "shippedAt": "<ISO8601>", "message"?: "..." }` |
 
-Payload exemple :
+Payload exemple (poids) :
 
 ```json
 {
   "weightKg": 2.45
+}
+```
+
+Réception (body minimal) :
+
+```json
+{
+  "receivedAt": "2026-05-14T10:00:00.000Z"
 }
 ```
 
@@ -501,19 +529,19 @@ Exemple :
 | `READY_TO_SHIP` | marquer expédié |
 | `SHIPPED` | marquer en livraison, marquer exception |
 | `OUT_FOR_DELIVERY` | marquer livré |
+| `DELIVERED` | (état terminal côté workflow) |
 
-Routes à prévoir :
+Routes côté backend (déjà en place pour le statut commande) :
 
-- `PATCH /admin/orders/:id/status`
-- `PATCH /admin/shipping-requests/:id/status` si les demandes de transport sont séparées des commandes ;
-- `POST /admin/orders/:id/exception`.
+- `PATCH /orders/:id` avec body `{ "status": "..." }` (admin uniquement).
+
+Variante « routes dédiées » (`PATCH /admin/orders/:id/status`) : **non** ; tout passe par `PATCH /orders/:id`.
 
 Payload exemple :
 
 ```json
 {
-  "status": "WAREHOUSE_RECEIVED",
-  "reason": "Colis reçu à l'entrepôt de Paris."
+  "status": "WAREHOUSE_RECEIVED"
 }
 ```
 
@@ -576,13 +604,13 @@ Objectif : enregistrer clairement la date à laquelle le colis quitte l'entrepô
 
 Recommandation :
 
-- stocker la date sur `Parcel.shippedAt` ;
-- ajouter aussi un `TrackingEvent` avec statut `SHIPPED` ;
-- si tous les colis d'une commande sont expédiés, passer `Order.status` à `SHIPPED`.
+- stocker la date sur `Parcel.shippedAt` (**déjà le cas** via `POST /parcels/:id/ship`) ;
+- un **`TrackingEvent`** `SHIPPED` est créé par cette route ;
+- si tous les colis d'une commande sont expédiés, **`syncOrderStatusFromParcels`** peut faire monter `Order.status` vers `SHIPPED`.
 
-Route à prévoir :
+**Implémenté** :
 
-- `POST /admin/parcels/:id/ship`
+- `POST /parcels/:id/ship` (admin) — proxy Next : `POST /api/admin/parcels/[id]/ship`.
 
 Payload exemple :
 
@@ -656,8 +684,8 @@ sequenceDiagram
   participant C as CarrierAdapter
   participant DB as PostgreSQL
 
-  A->>UI: Clique Créer expédition
-  UI->>API: POST /admin/parcels/:id/shipment
+  A->>UI: Clique Créer expédition (transporteur)
+  UI->>API: POST /carriers/shipment (proxy Next futur : /api/admin/parcels/:id/shipment)
   API->>C: createShipment(parcel, address, weight)
   C-->>API: labelUrl + trackingRef
   API->>DB: Parcel.labelUrl + TrackingEvent
@@ -665,10 +693,14 @@ sequenceDiagram
   UI-->>A: Bouton Imprimer étiquette
 ```
 
-Routes à prévoir :
+Routes côté backend **aujourd’hui** :
 
-- `POST /admin/parcels/:id/shipment`
-- `GET /admin/parcels/:id/label`
+- `POST /carriers/shipment` (admin, dans `index.js`) — **pas** encore de route Next dédiée sous `app/api/admin/...`.
+
+Routes **à ajouter** (cible) :
+
+- `POST` proxy Next `…/api/admin/parcels/:id/shipment` → backend `POST /carriers/shipment` ;
+- `GET /admin/parcels/:id/label` (optionnel, si lecture PDF dédiée).
 
 Règles :
 
@@ -896,27 +928,31 @@ Actions :
 
 ### Lot 1 - Socle admin commande et colis
 
-Objectif : rendre robuste ce qui est déjà commencé.
+**Statut : en grande partie livré (backend + Prisma + proxies Next).** Poursuivre surtout le **branchement UI** détail commande et les tests avec `seed-demo-orders`.
+
+Objectif initial : rendre robuste le flux réception → poids → expédition.
 
 Tâches :
 
-1. compléter les statuts backend selon `docs/state-machines.md` ;
-2. ajouter les champs Prisma `Parcel.receivedAt` et `Parcel.shippedAt` ;
-3. ajouter les migrations Prisma ;
-4. ajouter `POST /admin/parcels/:id/warehouse-receipt` ;
-5. fiabiliser `PATCH /admin/parcels/:id` pour le poids ;
-6. ajouter `POST /admin/parcels/:id/ship` ;
-7. écrire `TrackingEvent` à chaque étape ;
-8. écrire `AuditLog` à chaque mutation ;
-9. mettre à jour la page détail commande.
+1. ~~compléter les statuts backend selon `docs/state-machines.md`~~ — **partiel** : `PATCH /orders/:id` accepte la liste étendue ; le guidage strict des transitions reste une amélioration UX + règles métier optionnelles ;
+2. ~~ajouter les champs Prisma `Parcel.receivedAt` et `Parcel.shippedAt`~~ — **fait** ;
+3. ~~migrations Prisma associées~~ — **fait** ;
+4. ~~`POST …/warehouse-receipt`~~ — **fait** (`/parcels/:id/warehouse-receipt`) ;
+5. ~~`PATCH …/parcels/:id` pour le poids~~ — **fait** (après réception uniquement) ;
+6. ~~`POST …/ship`~~ — **fait** (`/parcels/:id/ship`) ;
+7. ~~`TrackingEvent` aux étapes concernées~~ — **fait** (warehouse-receipt, **pesée** `WEIGHT_CAPTURED`, ship) ;
+8. ~~`AuditLog`~~ — **fait** sur ces mutations ;
+9. **mettre à jour la page détail commande** — **à finaliser** : boutons alignés sur `/api/admin/parcels/.../warehouse-receipt` et `.../ship`, affichage `receivedAt` / `shippedAt`.
 
 Critères d'acceptation :
 
-- un admin peut confirmer la réception d'un colis ;
+- un admin peut confirmer la réception d'un colis (**API OK** ; UI à compléter) ;
 - un admin peut saisir le poids réel ;
-- un admin peut renseigner la date d'expédition ;
-- la commande avance automatiquement si tous les colis sont prêts ;
-- l'historique est visible.
+- un admin peut enregistrer l'expédition (`shippedAt`) ;
+- la commande peut avancer automatiquement via **sync** quand tous les colis sont prêts ;
+- l'historique tracking / audit est visible côté API et progressivement côté UI.
+
+**Données de test** : `npm run db:seed:demo-orders` — voir [`admin-orders-frontend-handoff.md`](./admin-orders-frontend-handoff.md).
 
 ### Lot 2 - Facturation Zoho
 
@@ -941,18 +977,23 @@ Critères d'acceptation :
 - l'admin peut valider la facture ;
 - les erreurs sont visibles et relançables.
 
-### Lot 3 - Etiquettes et expédition
+### Lot 3 - Etiquettes et expédition transporteur
 
-Objectif : permettre la création d'une expédition et l'impression de l'étiquette.
+**Distinction importante** :
+
+- **`POST /parcels/:id/ship`** (déjà en place) : enregistre l’**expédition depuis l’entrepôt** (`shippedAt`, statut colis, tracking, sync commande). Ce n’est **pas** l’appel API transporteur pour PDF d’étiquette.
+- **`POST /carriers/shipment`** (stub `CarrierAdapter`) : création d’**étiquette / expédition chez le transporteur** et remplissage de `Parcel.labelUrl` — **à brancher** côté UI + éventuel proxy Next.
+
+Objectif : permettre la création d'une expédition **transporteur** et l'impression de l'étiquette.
 
 Tâches :
 
 1. finaliser le choix transporteur ou garder un générateur PDF interne MVP ;
 2. compléter `CarrierAdapter.createShipment` ;
-3. créer `POST /admin/parcels/:id/shipment` ;
+3. créer `POST /admin/parcels/:id/shipment` (proxy Next vers `POST /carriers/shipment`) ;
 4. stocker `Parcel.labelUrl` ;
-5. ajouter `TrackingEvent READY_TO_SHIP` ou `SHIPPED` ;
-6. ajouter le bouton `Créer expédition` ;
+5. ajouter un `TrackingEvent` métier si le transporteur renvoie un numéro de suivi distinct ;
+6. ajouter le bouton `Créer expédition` (transporteur) dans l’UI ;
 7. ajouter le bouton `Imprimer étiquette`.
 
 Critères d'acceptation :
@@ -1026,16 +1067,16 @@ Critères d'acceptation :
 
 ## Priorisation recommandée
 
-Ordre recommandé pour livrer vite sans casser le produit :
+Ordre recommandé pour livrer vite sans casser le produit (état au document) :
 
-1. Lot 1 : réception, poids, date expédition, statuts, audit.
+1. **Lot 1 (suite)** : finaliser **UI** détail commande + tests seed — le **backend** du socle réception / poids / ship est déjà là.
 2. Lot 2 : facture Zoho brouillon + validation.
-3. Lot 3 : étiquette et expédition.
+3. Lot 3 : étiquette **transporteur** (`CarrierAdapter` + proxy Next) — distinct de `POST /parcels/:id/ship`.
 4. Lot 6 : utilisateurs et candidatures.
 5. Lot 5 : communications.
 6. Lot 4 : corrections avancées, si une version simple n'a pas déjà été faite dans le lot 1.
 
-La raison : le coeur opérationnel est la commande. Tant que le cycle commande -> poids -> facture -> expédition n'est pas solide, les autres modules doivent rester secondaires.
+La raison : le cœur opérationnel commande → entrepôt → expédition doit rester prioritaire ; la facturation et le transporteur suivent.
 
 ## Definition of Done globale
 
@@ -1053,17 +1094,19 @@ Une fonctionnalité admin est considérée prête quand :
 
 ## Tests manuels prioritaires
 
-Parcours commande standard :
+**Jeu de données** : après `db:seed` puis `npm run db:seed:demo-orders` (dossier `backend`), utiliser les commandes `order-demo-*` — détail dans [`admin-orders-frontend-handoff.md`](./admin-orders-frontend-handoff.md).
 
-1. créer une commande client ;
-2. la passer payée ;
-3. confirmer réception entrepôt ;
-4. renseigner poids ;
+Parcours commande standard (API ou UI une fois branchée) :
+
+1. créer une commande client **ou** ouvrir `order-demo-pending-receipt` ;
+2. la passer payée (ou partir d’une commande déjà `PAID`) ;
+3. confirmer réception entrepôt : `POST /parcels/:id/warehouse-receipt` ;
+4. renseigner poids : `PATCH /parcels/:id` ;
 5. générer facture brouillon ;
 6. valider facture Zoho ;
-7. créer expédition ;
+7. créer expédition **transporteur** : `POST /carriers/shipment` (stub) ;
 8. imprimer étiquette ;
-9. renseigner date d'expédition ;
+9. enregistrer **expédition entrepôt** : `POST /parcels/:id/ship` (`shippedAt`) — déjà couvert par le lot 1 backend ;
 10. vérifier l'historique client et admin.
 
 Parcours correction :

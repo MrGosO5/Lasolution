@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { SiteSignOutButton } from "@/app/site/components/SiteSignOutButton";
 
 export async function SiteHeader() {
   const session = await getServerSession(authOptions);
@@ -9,10 +10,9 @@ export async function SiteHeader() {
   const role = session?.user?.role;
 
   const isClient = role === "client";
-  const isAdmin = role === "admin";
 
-  const accountHref = isAdmin ? "/dashboard" : "/mon-espace";
-  const accountLabel = isAdmin ? "Tableau de bord" : "Mon espace";
+  const accountHref = role === "admin" ? "/dashboard" : "/mon-espace";
+  const accountLabel = role === "admin" ? "Tableau de bord" : "Mon espace";
 
   return (
     <header className="sticky top-0 z-40 border-b border-black/5 bg-white/60 backdrop-blur-md">
@@ -48,9 +48,7 @@ export async function SiteHeader() {
                   Mes commandes
                 </Link>
               ) : null}
-              <Link href="/api/auth/signout?callbackUrl=/" className="btn btn-primary">
-                Se déconnecter
-              </Link>
+              <SiteSignOutButton className="btn btn-primary" />
             </>
           ) : (
             <>
@@ -96,12 +94,7 @@ export async function SiteHeader() {
                         Mes commandes
                       </Link>
                     ) : null}
-                    <Link
-                      href="/api/auth/signout?callbackUrl=/"
-                      className="rounded-xl px-3 py-2 font-semibold text-gray-900 hover:bg-black/5"
-                    >
-                      Se déconnecter
-                    </Link>
+                    <SiteSignOutButton className="w-full rounded-xl px-3 py-2 text-left font-semibold text-gray-900 hover:bg-black/5" />
                   </>
                 ) : (
                   <>

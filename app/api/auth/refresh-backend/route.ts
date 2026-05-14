@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
+import { getNextAuthSecret } from "@/lib/nextauth-secret";
 
 const AUTH_API_URL = process.env.AUTH_API_URL ?? process.env.INTERNAL_AUTH_API_URL ?? "http://localhost:4000";
 
@@ -9,10 +10,7 @@ const AUTH_API_URL = process.env.AUTH_API_URL ?? process.env.INTERNAL_AUTH_API_U
  * (le refresh reste dans le JWT, pas exposé sur session.user).
  */
 export async function POST(req: NextRequest) {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    return NextResponse.json({ error: "NEXTAUTH_SECRET manquant." }, { status: 500 });
-  }
+  const secret = getNextAuthSecret();
 
   const token = await getToken({ req, secret });
   const refresh = token?.refreshToken;

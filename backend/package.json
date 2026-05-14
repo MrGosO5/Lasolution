@@ -11,6 +11,8 @@
     "db:migrate": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma migrate deploy",
     "db:migrate:dev": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma migrate dev",
     "db:seed": "node prisma/seed.js",
+    "db:seed:demo-orders": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- node prisma/seed-demo-orders.js",
+    "db:studio": "node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma studio",
     "postinstall": "node ./scripts/prisma-generate-with-retry.cjs"
   },
   "prisma": {

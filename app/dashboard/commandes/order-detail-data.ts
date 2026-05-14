@@ -13,6 +13,8 @@ export type OrderDetailData = {
     id: string;
     status: string;
     weightKg: string;
+    receivedAt: string;
+    shippedAt: string;
     createdAt: string;
     trackingEvents: { id: string; status: string; message: string; at: string }[];
   }[];
@@ -92,6 +94,8 @@ export function mapApiOrderToDetailData(order: Record<string, unknown>): OrderDe
       id?: string;
       status?: string;
       weightKg?: unknown;
+      receivedAt?: unknown;
+      shippedAt?: unknown;
       createdAt?: string;
       trackingEvents?: Array<{ id?: string; status?: string; message?: string | null; createdAt?: string }>;
     }>) || [];
@@ -112,6 +116,8 @@ export function mapApiOrderToDetailData(order: Record<string, unknown>): OrderDe
         id: String(p.id || ""),
         status: String(p.status || ""),
         weightKg: p.weightKg != null ? String(p.weightKg) : "",
+        receivedAt: p.receivedAt != null ? String(p.receivedAt) : "",
+        shippedAt: p.shippedAt != null ? String(p.shippedAt) : "",
         createdAt: String(p.createdAt || ""),
         trackingEvents: events,
       };
