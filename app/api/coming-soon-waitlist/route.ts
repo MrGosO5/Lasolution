@@ -3,6 +3,7 @@ import {
   sendComingSoonWaitlistEmailJs,
   sendComingSoonWaitlistUserConfirmationEmailJs,
 } from "@/lib/emailjsComingSoon";
+import { isValidPhoneDialCode } from "@/lib/phone-dial-options";
 
 function apiBase() {
   return (process.env.INTERNAL_AUTH_API_URL || process.env.AUTH_API_URL || "http://127.0.0.1:4000").replace(/\/$/, "");
@@ -55,12 +56,21 @@ export async function POST(req: Request) {
     }
   }
 
+  const phoneDial = String(body.phoneDial ?? "").trim();
+  const phone = String(body.phone ?? "").trim();
+  if (!phoneDial || !isValidPhoneDialCode(phoneDial)) {
+    return NextResponse.json({ error: "Indicatif téléphonique invalide." }, { status: 400 });
+  }
+  if (!phone) {
+    return NextResponse.json({ error: "Numéro de téléphone requis." }, { status: 400 });
+  }
+
   const payload = {
     profile,
     name: String(body.name ?? "").trim(),
     email: String(body.email ?? "").trim(),
-    phoneDial: String(body.phoneDial ?? "").trim(),
-    phone: String(body.phone ?? "").trim(),
+    phoneDial,
+    phone,
     articleUrl: articleLinks.join("\n"),
   };
 

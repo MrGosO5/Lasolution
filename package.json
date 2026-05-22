@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@emailjs/nodejs": "^5.0.2",
+    "country-telephone-data": "^0.6.3",
     "framer-motion": "^11.18.2",
     "iconoir-react": "^7.11.0",
     "next": "14.2.15",

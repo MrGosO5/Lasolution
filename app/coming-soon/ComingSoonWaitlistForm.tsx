@@ -175,12 +175,12 @@ export function ComingSoonWaitlistForm({ withFrame = true, className }: ComingSo
                           />
                         </label>
 
-                        <div className="flex flex-col gap-2 text-left">
+                        <div className="relative z-30 flex flex-col gap-2 text-left">
                           <span className="text-base font-semibold leading-[22px] text-black" id="waitlist-phone-label">
                             {C.form.phoneLabel}
                           </span>
                           <div
-                            className={`relative z-10 flex w-full overflow-visible rounded-lg border border-[#999999] bg-white focus-within:ring-2 focus-within:ring-[#C32353]/25 ${
+                            className={`relative flex w-full overflow-visible rounded-lg border border-[#999999] bg-white focus-within:ring-2 focus-within:ring-[#C32353]/25 ${
                               tab === "pro" ? "h-[44px]" : "h-[46px]"
                             }`}
                           >

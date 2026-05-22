@@ -154,21 +154,5 @@ export const comingSoonCopy = {
   },
 } as const;
 
-/** Indicatifs — `iso` = code pays ISO 3166-1 alpha-2 (drapeaux via flagcdn) */
-export const comingSoonPhoneDialOptions = [
-  { dial: "+229", iso: "bj", name: "Bénin" },
-  { dial: "+228", iso: "tg", name: "Togo" },
-  { dial: "+225", iso: "ci", name: "Côte d'Ivoire" },
-  { dial: "+221", iso: "sn", name: "Sénégal" },
-  { dial: "+223", iso: "ml", name: "Mali" },
-  { dial: "+226", iso: "bf", name: "Burkina Faso" },
-  { dial: "+227", iso: "ne", name: "Niger" },
-  { dial: "+224", iso: "gn", name: "Guinée" },
-  { dial: "+235", iso: "td", name: "Tchad" },
-  { dial: "+241", iso: "ga", name: "Gabon" },
-  { dial: "+242", iso: "cg", name: "Congo" },
-  { dial: "+33", iso: "fr", name: "France" },
-  { dial: "+32", iso: "be", name: "Belgique" },
-  { dial: "+41", iso: "ch", name: "Suisse" },
-  { dial: "+1", iso: "ca", name: "Canada" },
-] as const;
+/** @deprecated Utiliser `phoneDialOptions` depuis `@/lib/phone-dial-options` */
+export { phoneDialOptions as comingSoonPhoneDialOptions } from "@/lib/phone-dial-options";

@@ -298,25 +298,11 @@ function setupPublicContactRoute(app) {
 /**
  * Liste d’attente page Coming Soon — SecurityEvent + email vers CUSTOMERCARE_EMAIL (SMTP si configuré).
  */
-function setupPublicComingSoonWaitlistRoute(app) {
-  const allowedDials = new Set([
-    "+229",
-    "+228",
-    "+225",
-    "+221",
-    "+223",
-    "+226",
-    "+227",
-    "+224",
-    "+235",
-    "+241",
-    "+242",
-    "+33",
-    "+32",
-    "+41",
-    "+1",
-  ]);
+function isValidPhoneDialCode(dial) {
+  return typeof dial === "string" && /^\+\d{1,4}$/.test(dial);
+}
 
+function setupPublicComingSoonWaitlistRoute(app) {
   app.post("/public/coming-soon-waitlist", async (req, res) => {
     const prisma = getPrisma();
     const body = req.body || {};
@@ -344,7 +330,7 @@ function setupPublicComingSoonWaitlistRoute(app) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: "Email invalide." });
     }
-    if (!phoneDial || !allowedDials.has(phoneDial)) {
+    if (!phoneDial || !isValidPhoneDialCode(phoneDial)) {
       return res.status(400).json({ error: "Indicatif téléphonique invalide." });
     }
     if (profile === "buyer") {

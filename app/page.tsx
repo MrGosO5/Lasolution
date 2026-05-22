@@ -93,9 +93,9 @@ export default function AccueilPage() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 pb-16">
+      <section className="relative z-20 mx-auto w-full max-w-6xl px-6 pb-16">
         <Reveal>
-          <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 shadow-sm p-6 md:p-10">
+          <div className="rounded-3xl bg-white/70 ring-1 ring-black/5 shadow-sm p-6 md:p-10 overflow-visible">
             <ComingSoonWaitlistForm
               withFrame={false}
               className="mx-auto w-full max-w-[720px]"
