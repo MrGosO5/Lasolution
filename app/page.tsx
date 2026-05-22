@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Logo } from "./components/Logo";
 import { Reveal } from "./site/components/Reveal";
 import { SocialLinksRow } from "./site/components/SocialLinksRow";
 import { ComingSoonWaitlistForm } from "./coming-soon/ComingSoonWaitlistForm";
@@ -7,7 +9,13 @@ export default function AccueilPage() {
     <main>
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(900px_circle_at_20%_15%,rgba(195,35,83,0.20),transparent_55%),radial-gradient(700px_circle_at_80%_30%,rgba(99,102,241,0.18),transparent_55%),radial-gradient(800px_circle_at_50%_80%,rgba(236,72,153,0.12),transparent_55%)]" />
-        <div className="mx-auto w-full max-w-6xl px-6 py-16 md:py-20 relative">
+        <div className="mx-auto w-full max-w-6xl px-6 pt-6 relative z-10">
+          <Link href="/" className="inline-block focus-ring rounded-xl">
+            <span className="sr-only">La Solution — accueil</span>
+            <Logo />
+          </Link>
+        </div>
+        <div className="mx-auto w-full max-w-6xl px-6 py-10 md:py-16 relative">
           <div className="grid items-center gap-10 md:grid-cols-[1.2fr_0.8fr]">
             <Reveal>
               <div className="flex flex-col gap-6">

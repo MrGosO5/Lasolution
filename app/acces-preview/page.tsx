@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoWithTagline } from "@/app/components/LogoWithTagline";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, Suspense } from "react";
 
@@ -53,7 +54,8 @@ function AccesPreviewForm() {
         aria-hidden
       />
       <div className="relative w-full max-w-md rounded-[24px] bg-white/80 backdrop-blur-sm shadow-xl shadow-gray-200/50 ring-1 ring-black/5 p-8 md:p-10">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">La Solution</p>
+        <LogoWithTagline />
+        <p className="sr-only">La Solution</p>
         <h1 className="mt-2 text-2xl font-bold text-gray-900 tracking-tight">Accès au site</h1>
         <p className="mt-2 text-sm text-gray-600 leading-relaxed">
           Ce site est protégé par un mot de passe local. Saisissez-le pour continuer.

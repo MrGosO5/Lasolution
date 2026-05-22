@@ -1,20 +1,17 @@
 import Image from "next/image";
-
-const LOGO_SRC = "/icon/LOGO-SOLUTION-DECL.png";
-const INTRINSIC_W = 237;
-const INTRINSIC_H = 168;
+import { BRAND_LOGO_HEIGHT, BRAND_LOGO_SRC, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <div className={`relative inline-block ${className ?? ""}`}>
       <Image
-        src={LOGO_SRC}
+        src={BRAND_LOGO_SRC}
         alt="La Solution"
-        width={INTRINSIC_W}
-        height={INTRINSIC_H}
-        className="h-auto w-20 max-w-full object-contain"
+        width={BRAND_LOGO_WIDTH}
+        height={BRAND_LOGO_HEIGHT}
+        className="h-10 w-auto max-w-[200px] object-contain object-left"
         style={{ height: "auto" }}
-        sizes="80px"
+        sizes="(max-width: 768px) 160px, 200px"
         priority
       />
     </div>

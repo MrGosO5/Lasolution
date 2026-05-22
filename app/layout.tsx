@@ -13,9 +13,9 @@ export const metadata: Metadata = {
   title: "La Solution",
   description: "La Solution - Transport France vers Afrique",
   icons: {
-    icon: "/icon/logo_solution.png",
-    shortcut: "/icon/logo_solution.png",
-    apple: "/icon/logo_solution.png",
+    icon: "/icon/logolasolution.png",
+    shortcut: "/icon/logolasolution.png",
+    apple: "/icon/logolasolution.png",
   },
 };
 

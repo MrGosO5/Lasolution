@@ -25,7 +25,7 @@ export function DashboardSidebar() {
         aria-label="Accueil La Solution"
       >
         <Image
-          src="/icon/LOGO-SOLUTION-DECL.png"
+          src="/icon/logolasolution.png"
           alt="La Solution"
           fill
           sizes="170px"
