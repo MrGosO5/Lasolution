@@ -10,6 +10,7 @@ type Tab = {
 
 const tabs: Tab[] = [
   { href: "/mes-commandes", title: "Commandes", desc: "Historique, statut, détails et preuve photo." },
+  { href: "/mes-avis", title: "Mes avis", desc: "Témoignages laissés après livraison de vos commandes." },
   { href: "/mon-profil", title: "Profil", desc: "Informations personnelles et contacts." },
   { href: "/parametres", title: "Paramètres", desc: "Sécurité, langue, préférences." },
   { href: "/notifications", title: "Notifications", desc: "Événements sur vos commandes et paiements." },

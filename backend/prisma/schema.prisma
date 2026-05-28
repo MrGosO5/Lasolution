@@ -21,6 +21,12 @@ enum OrderType {
   CONCIERGE_PURCHASE
 }
 
+enum TestimonialStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Country {
   id        String    @id @default(cuid())
   code      String    @unique
@@ -133,20 +139,26 @@ model Order {
 
 /// Avis / témoignage client après livraison (1 par commande).
 model OrderTestimonial {
-  id         String   @id @default(cuid())
-  orderId    String   @unique
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientName String
-  city       String
-  country    String
-  message    String   @db.Text
-  rating     Int?
-  photoUrl   String?
-  createdAt  DateTime @default(now())
+  id           String            @id @default(cuid())
+  orderId      String            @unique
+  order        Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientName   String
+  city         String
+  country      String
+  message      String            @db.Text
+  rating       Int?
+  photoUrl     String?
+  status       TestimonialStatus @default(PENDING)
+  rejectReason String?           @db.Text
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([userId])
+  @@index([status, createdAt])
 }
 
 model OrderLine {

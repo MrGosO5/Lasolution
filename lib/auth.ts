@@ -71,6 +71,18 @@ export const authOptions: NextAuthOptions = {
           token.refreshToken = session.refreshToken;
         }
       }
+
+      /** Ancienne session démo : aligner l’id affiché côté NextAuth */
+      const email = String(token.email || "").toLowerCase();
+      if (
+        token.role === "client" &&
+        email === "client@lasolution.demo" &&
+        token.id &&
+        token.id !== "client-demo"
+      ) {
+        token.id = "client-demo";
+      }
+
       return token;
     },
     async session({ session, token }) {

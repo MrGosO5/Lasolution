@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const { hashPassword } = require("../auth/password");
 const { setupAuthRoutes } = require("./authRoutes");
 const { setupOrderParcelRoutes } = require("./ordersParcels");
+const { setupTestimonialRoutes } = require("./testimonials");
 const { setupMissionRoutes } = require("./missions");
 const { setupShippingRequestRoutes } = require("./shippingRequests");
 const { requireAuth, requireRoles, strictRateLimit } = require("../middleware/auth");
@@ -984,6 +985,7 @@ function setupAdminStatsRoute(app) {
         totalSolupackers,
         totalRelais,
         revenueAgg,
+        pendingTestimonials,
       ] = await Promise.all([
         prisma.order.count(),
         prisma.order.groupBy({ by: ["status"], _count: { _all: true } }),
@@ -996,6 +998,7 @@ function setupAdminStatsRoute(app) {
             order: { status: { in: ["PAID", "DELIVERED"] } },
           },
         }),
+        prisma.orderTestimonial.count({ where: { status: "PENDING" } }),
       ]);
 
       const byStatus = {};
@@ -1012,6 +1015,7 @@ function setupAdminStatsRoute(app) {
         totalClients,
         totalSolupackers,
         totalRelais,
+        pendingTestimonials,
       });
     } catch (e) {
       res.status(500).json({ error: String(e.message || e) });
@@ -1022,6 +1026,7 @@ function setupAdminStatsRoute(app) {
 function setupRoutes(app, config) {
   setupAuthRoutes(app, getPrisma, config);
   setupOrderParcelRoutes(app, getPrisma);
+  setupTestimonialRoutes(app, getPrisma);
   setupMissionRoutes(app, getPrisma);
   setupShippingRequestRoutes(app, getPrisma);
   setupPartnerOpsRoutes(app);

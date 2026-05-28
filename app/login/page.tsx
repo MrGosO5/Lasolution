@@ -66,7 +66,7 @@ function LoginForm() {
         const role = session?.user?.role as AppRole | undefined;
         let path = callbackUrl;
         if (role === "admin") path = "/dashboard";
-        else if (role === "client") path = "/espace-client";
+        else if (role === "client") path = "/mon-espace";
         else if (role && partnerPathByRole[role]) path = partnerPathByRole[role]!;
         // Redirection en URL complète pour garder le bon port (ex: 3001)
         const url = typeof window !== "undefined" ? window.location.origin + path : path;

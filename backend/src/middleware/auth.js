@@ -1,4 +1,5 @@
 const { verifyAccessToken } = require("../auth/tokens");
+const { normalizeAuthPayload } = require("../auth/normalizeClientAuth");
 const { getRedis } = require("../redis");
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -55,7 +56,7 @@ function requireAuth(req, res, next) {
   }
   const token = h.slice("Bearer ".length).trim();
   try {
-    const payload = verifyAccessToken(token);
+    const payload = normalizeAuthPayload(verifyAccessToken(token));
     req.auth = payload;
     next();
   } catch {

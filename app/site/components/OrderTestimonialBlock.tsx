@@ -1,8 +1,28 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { fetchWithBackendAuth } from "@/lib/client-backend-token";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { testimonialPhotoUrl } from "@/lib/testimonial-media";
+import type { TestimonialStatus } from "@/lib/testimonial-client";
+
+export type { TestimonialStatus };
+
+export type OrderTestimonialData = {
+  id: string;
+  clientName: string;
+  city: string;
+  country: string;
+  message: string;
+  rating: number | null;
+  photoUrl: string | null;
+  status: TestimonialStatus;
+  rejectReason?: string | null;
+  createdAt: string;
+};
 
 function apiBase() {
   return (process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:4000").replace(/\/$/, "");
@@ -18,15 +38,13 @@ function autoShownKey(orderId: string) {
 
 type Props = {
   orderId: string;
-  /** Commande considérée livrée (statut ou colis) */
   orderDelivered: boolean;
-  /** Déjà en base */
-  testimonialSubmitted: boolean;
+  testimonial: OrderTestimonialData | null;
 };
 
-export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSubmitted }: Props) {
+export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: Props) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [open, setOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [city, setCity] = useState("");
@@ -34,40 +52,71 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState<string>("");
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [submittedLocal, setSubmittedLocal] = useState(false);
 
   const isClient = session?.user?.role === "client";
   const accessToken = session?.user?.accessToken;
+  const isEdit = Boolean(testimonial);
+  const canEdit = testimonial && testimonial.status !== "APPROVED";
 
-  const eligible = Boolean(orderDelivered && !testimonialSubmitted && !submittedLocal && isClient);
+  const eligibleCreate = Boolean(orderDelivered && !testimonial && isClient);
 
-  const canShowManual = useMemo(() => {
-    return status === "authenticated" && isClient && orderDelivered && !testimonialSubmitted && !submittedLocal;
-  }, [status, isClient, orderDelivered, testimonialSubmitted, submittedLocal]);
+  const canShowManualCreate = useMemo(() => {
+    return status === "authenticated" && eligibleCreate;
+  }, [status, eligibleCreate]);
+
+  const fillFormFromTestimonial = useCallback((t: OrderTestimonialData) => {
+    setClientName(t.clientName);
+    setCity(t.city);
+    setCountry(t.country);
+    setMessage(t.message);
+    setRating(t.rating != null ? String(t.rating) : "");
+    setPhotoDataUrl(null);
+    setRemovePhoto(false);
+    setError(null);
+  }, []);
+
+  const openForm = useCallback(
+    (mode: "create" | "edit") => {
+      if (mode === "edit" && testimonial) fillFormFromTestimonial(testimonial);
+      else {
+        setClientName(session?.user?.name || "");
+        setCity("");
+        setCountry("");
+        setMessage("");
+        setRating("");
+        setPhotoDataUrl(null);
+        setRemovePhoto(false);
+        setError(null);
+      }
+      setOpen(true);
+    },
+    [testimonial, fillFormFromTestimonial, session?.user?.name],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (status !== "authenticated" || !isClient) return;
-    if (!eligible) return;
+    if (!eligibleCreate) return;
     if (localStorage.getItem(dismissKey(orderId))) return;
     if (localStorage.getItem(autoShownKey(orderId))) return;
     const t = window.setTimeout(() => setOpen(true), 500);
     return () => window.clearTimeout(t);
-  }, [orderId, status, isClient, eligible]);
+  }, [orderId, status, isClient, eligibleCreate]);
 
   useEffect(() => {
-    if (!open || typeof window === "undefined") return;
+    if (!open || typeof window === "undefined" || !eligibleCreate) return;
     localStorage.setItem(autoShownKey(orderId), "1");
-  }, [open, orderId]);
+  }, [open, orderId, eligibleCreate]);
 
   const closeDismiss = useCallback(() => {
     setOpen(false);
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && eligibleCreate) {
       localStorage.setItem(dismissKey(orderId), "1");
     }
-  }, [orderId]);
+  }, [orderId, eligibleCreate]);
 
   const validate = useCallback(() => {
     const n = clientName.trim();
@@ -106,15 +155,18 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
       };
       if (rating && rating !== "") body.rating = Number(rating);
       if (photoDataUrl) body.photoDataUrl = photoDataUrl;
+      if (isEdit && removePhoto) body.removePhoto = true;
 
-      const res = await fetch(`${apiBase()}/orders/${encodeURIComponent(orderId)}/testimonials`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+      const res = await fetchWithBackendAuth(
+        `${apiBase()}/orders/${encodeURIComponent(orderId)}/testimonials`,
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          accessToken,
+          update,
+          body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-      });
+      );
       const text = await res.text();
       if (!res.ok) {
         try {
@@ -125,9 +177,8 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
           throw new Error(text || `HTTP ${res.status}`);
         }
       }
-      setSubmittedLocal(true);
       setOpen(false);
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !isEdit) {
         localStorage.removeItem(dismissKey(orderId));
       }
       router.refresh();
@@ -139,17 +190,47 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
   }
 
   if (status === "loading") return null;
-  if (!isClient || !orderDelivered) return null;
-  if (testimonialSubmitted || submittedLocal) return null;
+  if (!isClient) return null;
+  if (!orderDelivered && !testimonial) return null;
+
+  const existingPhoto = testimonial?.photoUrl ? testimonialPhotoUrl(testimonial.photoUrl) : null;
 
   return (
     <>
-      {canShowManual ? (
+      {testimonial ? (
+        <div className="mt-4 rounded-2xl bg-white/70 px-4 py-3 ring-1 ring-black/5">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="text-sm">
+              <p className="font-semibold text-gray-900">Votre avis</p>
+              <p className="mt-2 text-gray-800 line-clamp-3">“{testimonial.message}”</p>
+              <p className="mt-1 text-xs opacity-80">
+                {testimonial.clientName} — {testimonial.city}, {testimonial.country}
+                {testimonial.rating != null ? ` · ${testimonial.rating}/5` : ""}
+              </p>
+            </div>
+            {existingPhoto ? (
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ring-1 ring-black/10">
+                <Image src={existingPhoto} alt="" fill className="object-cover" sizes="64px" unoptimized />
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {canEdit ? (
+              <button type="button" className="btn btn-ghost text-sm" onClick={() => openForm("edit")}>
+                Modifier mon avis
+              </button>
+            ) : null}
+            <Link href="/mes-avis" className="btn btn-ghost text-sm">
+              Voir tous mes avis
+            </Link>
+          </div>
+        </div>
+      ) : canShowManualCreate ? (
         <div className="mt-4 rounded-2xl bg-[rgba(195,35,83,0.08)] ring-1 ring-[var(--logo-red)]/20 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-800">
             Votre commande est livrée. Un avis nous aide à améliorer le service.
           </p>
-          <button type="button" className="btn btn-primary shrink-0" onClick={() => setOpen(true)}>
+          <button type="button" className="btn btn-primary shrink-0" onClick={() => openForm("create")}>
             Donner mon avis
           </button>
         </div>
@@ -172,18 +253,21 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
               ×
             </button>
             <h2 id="testimonial-title" className="text-lg font-semibold text-gray-900 pr-8">
-              Votre avis compte
+              {isEdit ? "Modifier votre avis" : "Votre avis compte"}
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Partagez votre expérience (champs marqués * sont obligatoires). Vous ne pourrez envoyer qu’un seul avis pour
-              cette commande.
+              {isEdit
+                ? "Vous pouvez mettre à jour votre message, votre note ou votre photo."
+                : "Partagez votre expérience (champs marqués * sont obligatoires). Un seul avis par commande."}
             </p>
 
-            {error ? <p className="mt-3 text-sm text-red-700 rounded-xl bg-red-50 px-3 py-2 ring-1 ring-red-200">{error}</p> : null}
+            {error ? (
+              <p className="mt-3 text-sm text-red-700 rounded-xl bg-red-50 px-3 py-2 ring-1 ring-red-200">{error}</p>
+            ) : null}
 
             <div className="mt-5 grid gap-4">
               <label className="grid gap-1 text-sm">
-                <span className="font-medium text-gray-800">Nom du client *</span>
+                <span className="font-medium text-gray-800">Nom affiché *</span>
                 <input
                   className="rounded-xl border border-black/10 px-3 py-2 text-gray-900"
                   value={clientName}
@@ -210,7 +294,7 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
                 />
               </label>
               <label className="grid gap-1 text-sm">
-                <span className="font-medium text-gray-800">Message / témoignage * (min. 20 caractères)</span>
+                <span className="font-medium text-gray-800">Message * (min. 20 caractères)</span>
                 <textarea
                   className="min-h-[120px] rounded-xl border border-black/10 px-3 py-2 text-gray-900"
                   value={message}
@@ -234,6 +318,20 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
               </label>
               <label className="grid gap-1 text-sm">
                 <span className="font-medium text-gray-800">Photo (optionnel, JPG/PNG, max 5 Mo)</span>
+                {existingPhoto && !photoDataUrl && !removePhoto ? (
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-14 w-14 overflow-hidden rounded-lg ring-1 ring-black/10">
+                      <Image src={existingPhoto} alt="" fill className="object-cover" sizes="56px" unoptimized />
+                    </div>
+                    <button
+                      type="button"
+                      className="text-sm text-red-700 underline"
+                      onClick={() => setRemovePhoto(true)}
+                    >
+                      Supprimer la photo
+                    </button>
+                  </div>
+                ) : null}
                 <input
                   type="file"
                   accept="image/jpeg,image/png"
@@ -256,6 +354,7 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
                       reader.readAsDataURL(file);
                     }).catch(() => "");
                     setPhotoDataUrl(dataUrl || null);
+                    setRemovePhoto(false);
                     setError(null);
                   }}
                 />
@@ -264,10 +363,10 @@ export function OrderTestimonialPrompt({ orderId, orderDelivered, testimonialSub
 
             <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button type="button" className="btn btn-ghost" onClick={closeDismiss} disabled={loading}>
-                Plus tard
+                Annuler
               </button>
               <button type="button" className="btn btn-dark" onClick={() => void submit()} disabled={loading}>
-                {loading ? "Envoi…" : "Envoyer mon avis"}
+                {loading ? "Envoi…" : isEdit ? "Enregistrer" : "Envoyer mon avis"}
               </button>
             </div>
           </div>

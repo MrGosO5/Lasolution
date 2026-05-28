@@ -3,6 +3,10 @@ import { Logo } from "./components/Logo";
 import { Reveal } from "./site/components/Reveal";
 import { SocialLinksRow } from "./site/components/SocialLinksRow";
 import { ComingSoonWaitlistForm } from "./coming-soon/ComingSoonWaitlistForm";
+import { PublicTestimonialsSection } from "@/app/site/components/PublicTestimonialsSection";
+
+/** Témoignages issus de la BDD — pas de cache page statique (5 min avant). */
+export const revalidate = 0;
 
 export default function AccueilPage() {
   return (
@@ -106,46 +110,7 @@ export default function AccueilPage() {
 
       {/* Bloc "Suivez votre commande..." temporairement masqué */}
 
-      <section className="mx-auto w-full max-w-6xl px-6 pb-20">
-        <Reveal>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Témoignages</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Faites vos achats ou envoyez un colis à vos proches en toute confiance, on s’occupe de tout.
-          </p>
-        </Reveal>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {[
-            {
-              name: "André",
-              city: "Cotonou, Bénin",
-              quote:
-                "J’ai commandé un sac en Europe, et je l’ai reçu en 10 jours à Cotonou. Le suivi était clair, et le service client super réactif.",
-            },
-            {
-              name: "Aïcha",
-              city: "Lomé, Togo",
-              quote:
-                "Le service d’achat assisté est juste génial. Je choisis ce que je veux, ils commandent et je reçois tout sans stress.",
-            },
-            {
-              name: "Hamid",
-              city: "Paris, France",
-              quote:
-                "En tant que Solupacker, je gagne de l’argent en rentrant chez moi. L’application est bien faite, et les paiements sont rapides.",
-            },
-          ].map((t, idx) => (
-            <Reveal key={t.name} delayMs={70 * idx}>
-              <figure className="rounded-2xl bg-white/70 ring-1 ring-black/5 shadow-sm p-6 transition-smooth hover:shadow-lg hover:shadow-gray-200/40">
-                <blockquote className="text-sm text-gray-700 leading-relaxed">“{t.quote}”</blockquote>
-                <figcaption className="mt-4 text-sm font-semibold text-gray-900">
-                  {t.name} <span className="font-normal text-gray-500">— {t.city}</span>
-                </figcaption>
-              </figure>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      <PublicTestimonialsSection />
     </main>
   );
 }

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { fetchApprovedTestimonials } from "@/lib/public-testimonials";
 import { ComingSoonContent } from "./ComingSoonContent";
+
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Bientôt disponible",
@@ -11,6 +14,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ComingSoonPage() {
-  return <ComingSoonContent />;
+export default async function ComingSoonPage() {
+  const testimonials = await fetchApprovedTestimonials(12);
+  return <ComingSoonContent testimonials={testimonials} />;
 }

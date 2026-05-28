@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { lasolutionFetchJson } from "@/lib/lasolution-api";
 import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
-import { OrderTestimonialPrompt } from "@/app/site/components/OrderTestimonialPrompt";
+import {
+  OrderTestimonialBlock,
+  type OrderTestimonialData,
+} from "@/app/site/components/OrderTestimonialBlock";
 
 type OrderDetail = {
   id: string;
@@ -15,7 +18,7 @@ type OrderDetail = {
   createdAt: string;
   lines: { description: string; quantity: number; unitPrice: string; currency: string }[];
   parcels: { id: string; status: string; createdAt: string }[];
-  testimonial?: { id: string; createdAt: string } | null;
+  testimonial?: OrderTestimonialData | null;
 };
 
 export default async function CommandeDetailPage({ params }: { params: { id: string } }) {
@@ -33,8 +36,6 @@ export default async function CommandeDetailPage({ params }: { params: { id: str
     (Array.isArray(order.parcels) &&
       order.parcels.length > 0 &&
       order.parcels.every((p) => String(p.status).toUpperCase() === "DELIVERED"));
-  const testimonialSubmitted = Boolean(order.testimonial?.id);
-
   const subtotal = (order.lines || []).reduce((acc, l) => acc + Number(l.unitPrice) * Number(l.quantity), 0);
   const createdAt = new Date(order.createdAt);
   return (
@@ -115,11 +116,13 @@ export default async function CommandeDetailPage({ params }: { params: { id: str
               </Link>
             </div>
 
-            <OrderTestimonialPrompt
-              orderId={order.id}
-              orderDelivered={orderDelivered}
-              testimonialSubmitted={testimonialSubmitted}
-            />
+            <div id="avis">
+              <OrderTestimonialBlock
+                orderId={order.id}
+                orderDelivered={orderDelivered}
+                testimonial={order.testimonial ?? null}
+              />
+            </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Link

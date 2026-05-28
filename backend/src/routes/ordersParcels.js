@@ -3,9 +3,10 @@ const { parseOptionalDate, syncOrderStatusFromParcels } = require("../lib/parcel
 const { requireAuth, requireRoles } = require("../middleware/auth");
 const { hashPassword, verifyPassword } = require("../auth/password");
 const crypto = require("crypto");
-const { saveOrderProof, saveTestimonialPhoto, deleteProofByPublicPath } = require("../utils/mediaProof");
+const { saveOrderProof, deleteProofByPublicPath } = require("../utils/mediaProof");
 const { sendMail, createSmtpTransporter, buildMailFrom } = require("../emails/mailer");
 const { orderStatusEmail } = require("../emails/templates");
+const { registerMeTestimonialsListRoute } = require("./testimonials");
 
 function isOrderDelivered(order) {
   if (!order) return false;
@@ -220,6 +221,8 @@ function setupOrderParcelRoutes(app, getPrisma) {
     res.json({ items: items.slice(0, 80) });
   });
 
+  registerMeTestimonialsListRoute(app, getPrisma);
+
   app.get("/orders", requireAuth, async (req, res) => {
     if (!["admin", "client"].includes(req.auth.role)) {
       return res.status(403).json({ error: "Accès refusé." });
@@ -279,6 +282,7 @@ function setupOrderParcelRoutes(app, getPrisma) {
               createdAt: true,
             },
           },
+          testimonial: { select: { id: true, status: true, createdAt: true } },
         },
       }),
     ]);
@@ -326,7 +330,22 @@ function setupOrderParcelRoutes(app, getPrisma) {
         lines: true,
         parcels: { include: { trackingEvents: { orderBy: { createdAt: "desc" }, take: 20 } } },
         procurement: { include: { lines: true } },
-        testimonial: { select: { id: true, createdAt: true } },
+        testimonial: {
+          select: {
+            id: true,
+            clientName: true,
+            city: true,
+            country: true,
+            message: true,
+            rating: true,
+            photoUrl: true,
+            status: true,
+            rejectReason: true,
+            createdAt: true,
+            updatedAt: true,
+            reviewedAt: true,
+          },
+        },
       },
     });
     if (!order) return res.status(404).json({ error: "Commande introuvable." });
@@ -482,97 +501,6 @@ function setupOrderParcelRoutes(app, getPrisma) {
     });
 
     res.json({ ok: true, orderId: updated.id, status: updated.status });
-  });
-
-  /**
-   * Témoignage après livraison : 1 par commande, client propriétaire uniquement.
-   */
-  app.post("/orders/:id/testimonials", requireAuth, async (req, res) => {
-    if (req.auth.role !== "client") {
-      return res.status(403).json({ error: "Réservé aux clients." });
-    }
-    const prisma = getPrisma();
-    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
-
-    const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
-      include: { parcels: true, testimonial: true },
-    });
-    if (!order) return res.status(404).json({ error: "Commande introuvable." });
-    if (order.userId !== req.auth.sub) {
-      return res.status(403).json({ error: "Accès refusé." });
-    }
-    if (!isOrderDelivered(order)) {
-      return res.status(400).json({ error: "Témoignage possible uniquement après livraison." });
-    }
-    if (order.testimonial) {
-      return res.status(409).json({ error: "Un témoignage existe déjà pour cette commande." });
-    }
-
-    const { clientName, city, country, message, rating, photoDataUrl } = req.body || {};
-    const nameTrim = String(clientName || "").trim();
-    const cityTrim = String(city || "").trim();
-    const countryTrim = String(country || "").trim();
-    const msgTrim = String(message || "").trim();
-
-    if (!nameTrim || !cityTrim || !countryTrim) {
-      return res.status(400).json({ error: "Nom, ville et pays sont obligatoires." });
-    }
-    if (msgTrim.length < 20) {
-      return res.status(400).json({ error: "Le message doit contenir au moins 20 caractères." });
-    }
-
-    let ratingNum = null;
-    if (rating != null && rating !== "") {
-      const n = parseInt(String(rating), 10);
-      if (Number.isNaN(n) || n < 1 || n > 5) {
-        return res.status(400).json({ error: "La note doit être entre 1 et 5." });
-      }
-      ratingNum = n;
-    }
-
-    const testimonialId = crypto.randomUUID();
-    let photoUrl = null;
-    if (photoDataUrl) {
-      try {
-        photoUrl = await saveTestimonialPhoto({ testimonialId, photoDataUrl });
-      } catch (e) {
-        const code = e.code || e.message;
-        return res.status(400).json({ error: "Photo invalide ou trop volumineuse.", code: String(code) });
-      }
-    }
-
-    try {
-      const row = await prisma.orderTestimonial.create({
-        data: {
-          id: testimonialId,
-          orderId: order.id,
-          userId: req.auth.sub,
-          clientName: nameTrim,
-          city: cityTrim,
-          country: countryTrim,
-          message: msgTrim,
-          rating: ratingNum,
-          photoUrl,
-        },
-      });
-      await prisma.auditLog.create({
-        data: {
-          actorId: req.auth.sub,
-          action: "order.testimonial.created",
-          entityType: "Order",
-          entityId: order.id,
-          after: { testimonialId: row.id },
-        },
-      });
-      res.status(201).json(row);
-    } catch (e) {
-      if (photoUrl) await deleteProofByPublicPath(photoUrl);
-      if (e.code === "P2002") {
-        return res.status(409).json({ error: "Un témoignage existe déjà pour cette commande." });
-      }
-      res.status(400).json({ error: String(e.message || e) });
-    }
   });
 
   app.post("/orders", ...clientOrAdmin, async (req, res) => {

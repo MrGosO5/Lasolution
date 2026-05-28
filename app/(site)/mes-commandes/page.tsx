@@ -6,11 +6,13 @@ import { MesCommandesOrdersTable, type MesCommandeRow } from "./MesCommandesOrde
 
 export default async function MesCommandesPage() {
   let rows: MesCommandeRow[] = [];
+  let loadError: string | null = null;
   try {
     const res = await lasolutionFetchJson<{ data: MesCommandeRow[] }>("/orders?page=1&pageSize=50");
     rows = res.data ?? [];
-  } catch {
+  } catch (e) {
     rows = [];
+    loadError = e instanceof Error ? e.message : "Impossible de charger vos commandes.";
   }
 
   const total = rows.length;
@@ -23,6 +25,11 @@ export default async function MesCommandesPage() {
           eyebrow="Client"
           title="Mes commandes"
           subtitle="Recherchez et suivez vos commandes. Les statuts et étapes apparaissent sur la page de détails."
+          right={
+            <Link href="/mes-avis" className="btn btn-ghost">
+              Mes avis
+            </Link>
+          }
         />
       </Reveal>
 
@@ -43,7 +50,16 @@ export default async function MesCommandesPage() {
         </Reveal>
 
         <Reveal delayMs={120}>
-          {rows.length === 0 ? (
+          {loadError ? (
+            <div className="card p-6 md:p-7 ring-1 ring-amber-200 bg-amber-50/80">
+              <p className="text-sm font-semibold text-amber-950">Chargement impossible</p>
+              <p className="mt-2 text-sm text-amber-900 leading-relaxed">{loadError}</p>
+              <p className="mt-2 text-sm text-amber-900">
+                Déconnectez-vous puis reconnectez-vous si le message mentionne un jeton expiré ou absent.
+              </p>
+            </div>
+          ) : null}
+          {!loadError && rows.length === 0 ? (
             <div className="card p-6 md:p-7">
               <p className="text-sm font-semibold text-gray-900">Aucune commande pour le moment</p>
               <p className="mt-1 text-sm text-gray-600">
@@ -58,9 +74,9 @@ export default async function MesCommandesPage() {
                 </Link>
               </div>
             </div>
-          ) : (
+          ) : !loadError ? (
             <MesCommandesOrdersTable orders={rows} />
-          )}
+          ) : null}
         </Reveal>
       </div>
     </main>

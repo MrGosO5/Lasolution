@@ -5,6 +5,7 @@ const { hashPassword, verifyPassword } = require("../auth/password");
 const { loginRateLimit, strictRateLimit } = require("../middleware/auth");
 const { sendMail } = require("../emails/mailer");
 const { welcomeEmail } = require("../emails/templates");
+const { reconcileDemoClientAccount } = require("../auth/normalizeClientAuth");
 
 function setupAuthRoutes(app, getPrisma, config) {
   app.post("/auth/register", strictRateLimit, async (req, res) => {
@@ -94,9 +95,10 @@ function setupAuthRoutes(app, getPrisma, config) {
       return res.status(400).json({ error: "Email et mot de passe requis." });
     }
 
-    let user = resolveUserFromCredentials(email, password, config);
+    /** Compte seed en base avant le fallback mot de passe env (évite id `client-email@…` ≠ `client-demo`). */
+    let user = null;
 
-    if (!user && prisma) {
+    if (prisma) {
       const em = String(email).trim().toLowerCase();
       try {
         const row = await prisma.user.findUnique({ where: { email: em } });
@@ -111,6 +113,10 @@ function setupAuthRoutes(app, getPrisma, config) {
       } catch (_) {
         /* ignore */
       }
+    }
+
+    if (!user) {
+      user = resolveUserFromCredentials(email, password, config);
     }
 
     if (!user) {
@@ -130,6 +136,8 @@ function setupAuthRoutes(app, getPrisma, config) {
       }
       return res.status(401).json({ error: "Identifiants invalides." });
     }
+
+    user = await reconcileDemoClientAccount(prisma, user);
 
     let dbReady = false;
     try {

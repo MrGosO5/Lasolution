@@ -19,6 +19,7 @@ const protectedSite = [
   "/compte",
   "/mon-espace",
   "/mes-commandes",
+  "/mes-avis",
   "/notifications",
   "/parametres",
   "/carte",
@@ -37,7 +38,7 @@ function secureCookieForRequest(req: NextRequest): boolean {
 
 function redirectForRole(role: AppRole, base: URL): URL {
   if (role === "admin") return new URL("/dashboard", base);
-  if (role === "client") return new URL("/espace-client", base);
+  if (role === "client") return new URL("/mon-espace", base);
   const partnerPath = partnerPathByRole[role];
   if (partnerPath) return new URL(partnerPath, base);
   return new URL("/connexion", base);

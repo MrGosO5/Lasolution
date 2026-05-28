@@ -50,7 +50,7 @@ export function applyRoleToDefaultHub(
 ): string {
   if (destination !== "/mon-espace") return destination;
   if (role === "admin") return "/dashboard";
-  if (role === "client") return "/espace-client";
+  if (role === "client") return "/mon-espace";
   if (role && partnerPathByRole[role]) return partnerPathByRole[role]!;
   return destination;
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { isOrderDelivered, type TestimonialStatus } from "@/lib/testimonial-client";
 
 export type MesCommandeRow = {
   id: string;
@@ -9,6 +10,8 @@ export type MesCommandeRow = {
   currency: string;
   createdAt: string;
   lines: { description: string; quantity: number; unitPrice: string; currency: string }[];
+  parcels?: { id: string; status: string }[];
+  testimonial?: { id: string; status: TestimonialStatus; createdAt: string } | null;
 };
 
 function statusLabel(status: string) {
@@ -72,27 +75,46 @@ export function MesCommandesOrdersTable({ orders }: { orders: MesCommandeRow[] }
         </div>
       ) : (
         <div className="grid overflow-x-auto">
-          <div className="min-w-[640px]">
-            <div className="grid grid-cols-[1.4fr_1fr_1fr_0.9fr_0.7fr] gap-2 px-5 py-3 text-xs font-semibold text-gray-600 uppercase bg-black/[0.02] border-b border-black/5">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[1.2fr_1fr_0.9fr_0.9fr_1fr_0.8fr] gap-2 px-5 py-3 text-xs font-semibold text-gray-600 uppercase bg-black/[0.02] border-b border-black/5">
               <span>Référence</span>
               <span>Articles</span>
               <span>Date</span>
               <span>Statut</span>
+              <span>Avis</span>
               <span>Action</span>
             </div>
             {filtered.map((o) => {
               const date = new Date(o.createdAt);
               const products = o.lines?.map((l) => `${l.description} ×${l.quantity}`).slice(0, 2).join(", ");
               const productsMore = (o.lines?.length ?? 0) > 2 ? ` +${(o.lines?.length ?? 0) - 2}` : "";
+              const delivered = isOrderDelivered(o);
+              const hasAvis = Boolean(o.testimonial?.id);
               return (
                 <div
                   key={o.id}
-                  className="grid grid-cols-[1.4fr_1fr_1fr_0.9fr_0.7fr] gap-2 px-5 py-4 text-sm border-b border-black/5 hover:bg-black/[0.02]"
+                  className="grid grid-cols-[1.2fr_1fr_0.9fr_0.9fr_1fr_0.8fr] gap-2 px-5 py-4 text-sm border-b border-black/5 hover:bg-black/[0.02]"
                 >
                   <span className="font-semibold text-gray-900">#{o.id.slice(0, 8)}</span>
                   <span className="text-gray-700">{products ? `${products}${productsMore}` : "—"}</span>
                   <span className="text-gray-700">{date.toLocaleDateString("fr-FR")}</span>
                   <span className="text-gray-700">{statusLabel(o.status)}</span>
+                  <span className="text-gray-700">
+                    {hasAvis ? (
+                      <Link href="/mes-avis" className="font-medium text-gray-900 hover:underline">
+                        Voir mon avis
+                      </Link>
+                    ) : delivered ? (
+                      <Link
+                        href={`/mes-commandes/${o.id}#avis`}
+                        className="font-semibold text-[var(--logo-red-dark)] hover:underline"
+                      >
+                        Donner un avis
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </span>
                   <Link className="text-gray-900 font-semibold hover:underline" href={`/mes-commandes/${o.id}`}>
                     Détails
                   </Link>

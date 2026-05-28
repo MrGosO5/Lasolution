@@ -2,17 +2,8 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { DeliveryTruck } from "iconoir-react";
 import { authOptions } from "@/lib/auth";
-import { lasolutionFetchJson } from "@/lib/lasolution-api";
+import { getAdminStats } from "@/lib/admin-stats";
 import { DashboardHeader } from "./components/DashboardHeader";
-
-type AdminStats = {
-  revenue: number;
-  totalOrders: number;
-  byStatus: Record<string, number>;
-  totalClients: number;
-  totalSolupackers: number;
-  totalRelais: number;
-};
 
 function formatRevenue(n: number): string {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
@@ -21,20 +12,8 @@ function formatRevenue(n: number): string {
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
-  let stats: AdminStats = {
-    revenue: 0,
-    totalOrders: 0,
-    byStatus: {},
-    totalClients: 0,
-    totalSolupackers: 0,
-    totalRelais: 0,
-  };
-
-  try {
-    stats = await lasolutionFetchJson<AdminStats>("/admin/stats");
-  } catch {
-    /* affichage dégradé si backend indisponible */
-  }
+  const stats = await getAdminStats();
+  const pendingAvis = stats.pendingTestimonials ?? 0;
 
   return (
     <>
@@ -45,6 +24,32 @@ export default async function DashboardPage() {
       />
       <div className="flex-1 overflow-y-auto p-6 md:pl-6 md:pt-6">
         <div className="flex flex-col gap-8 max-w-[1150px]">
+              {pendingAvis > 0 ? (
+                <Link
+                  href="/dashboard/avis?status=PENDING"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-card border border-amber-200 bg-amber-50 px-4 py-3.5 shadow-card hover:bg-amber-100/80 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white text-sm font-bold">
+                      {pendingAvis > 99 ? "99+" : pendingAvis}
+                    </span>
+                    <div>
+                      <p className="font-semibold text-figma-headerTitle">
+                        {pendingAvis === 1
+                          ? "1 avis en attente de validation"
+                          : `${pendingAvis} avis en attente de validation`}
+                      </p>
+                      <p className="text-sm text-figma-adminSub mt-0.5">
+                        Des clients ont laissé un témoignage à modérer avant publication sur le site.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-figma-activeMenuText shrink-0 sm:pl-4">
+                    Modérer les avis →
+                  </span>
+                </Link>
+              ) : null}
+
               {/* KPI row */}
               <section className="flex flex-row flex-wrap gap-4" aria-label="Indicateurs clés">
                 <KpiCard
@@ -71,6 +76,13 @@ export default async function DashboardPage() {
                   title="Points relais"
                   value={String(stats.totalRelais)}
                   icon={<MapPinIcon />}
+                />
+                <KpiCard
+                  title="Avis en attente"
+                  value={String(pendingAvis)}
+                  href={pendingAvis > 0 ? "/dashboard/avis?status=PENDING" : "/dashboard/avis"}
+                  icon={<StarIcon />}
+                  highlight={pendingAvis > 0}
                 />
               </section>
 
@@ -167,26 +179,52 @@ function KpiCard({
   title,
   value,
   icon,
+  href,
+  highlight,
 }: {
   title: string;
   value: string;
   icon: React.ReactNode;
+  href?: string;
+  highlight?: boolean;
 }) {
-  return (
-    <article
-      className="group box-border flex flex-col justify-between min-h-[140px] flex-1 min-w-[160px] max-w-[220px] p-4 gap-3 bg-white border border-figma-cardBorder rounded-card shadow-card hover:shadow-cardHover transition-smooth duration-normal"
-    >
+  const inner = (
+    <>
       <div className="flex flex-row items-center gap-2">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-figma-tableHeader text-figma-label group-hover:bg-figma-activeMenu/10 transition-colors duration-fast">
+        <div
+          className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors duration-fast ${
+            highlight
+              ? "bg-amber-100 text-amber-700"
+              : "bg-figma-tableHeader text-figma-label group-hover:bg-figma-activeMenu/10"
+          }`}
+        >
           {icon}
         </div>
         <span className="font-medium text-sm text-figma-adminSub">{title}</span>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="font-extrabold text-2xl text-figma-headerTitle">{value}</span>
+        <span
+          className={`font-extrabold text-2xl ${highlight ? "text-amber-700" : "text-figma-headerTitle"}`}
+        >
+          {value}
+        </span>
       </div>
-    </article>
+    </>
   );
+
+  const className = `group box-border flex flex-col justify-between min-h-[140px] flex-1 min-w-[160px] max-w-[220px] p-4 gap-3 bg-white border rounded-card shadow-card hover:shadow-cardHover transition-smooth duration-normal ${
+    highlight ? "border-amber-200 ring-1 ring-amber-100" : "border-figma-cardBorder"
+  }`;
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return <article className={className}>{inner}</article>;
 }
 
 function OrdersStatusChart({
@@ -326,6 +364,19 @@ function MapPinIcon() {
         strokeWidth="1.5"
       />
       <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-current">
+      <path
+        d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

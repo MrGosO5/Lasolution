@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getBackendAccessToken } from "@/lib/backend-access-token";
 
 function apiBaseUrl() {
   return (
@@ -15,7 +16,7 @@ function apiBaseUrl() {
  */
 export async function lasolutionFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const session = await getServerSession(authOptions);
-  const accessToken = session?.user?.accessToken;
+  let accessToken = await getBackendAccessToken();
 
   const url = path.startsWith("http") ? path : `${apiBaseUrl().replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 
@@ -34,7 +35,18 @@ export async function lasolutionFetch(path: string, init: RequestInit = {}): Pro
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  return fetch(url, { ...init, headers });
+  let res = await fetch(url, { ...init, headers, cache: init.cache ?? "no-store" });
+
+  if (res.status === 401 && session?.user) {
+    const refreshed = await getBackendAccessToken({ forceRefresh: true });
+    if (refreshed && refreshed !== accessToken) {
+      accessToken = refreshed;
+      headers.set("Authorization", `Bearer ${accessToken}`);
+      res = await fetch(url, { ...init, headers, cache: init.cache ?? "no-store" });
+    }
+  }
+
+  return res;
 }
 
 export async function lasolutionFetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {

@@ -307,7 +307,7 @@ export default async function PartnerSpacePage({ params }: Props) {
   const role = session.user.role as AppRole;
   if (role !== required) {
     if (role === "admin") redirect("/dashboard");
-    if (role === "client") redirect("/espace-client");
+    if (role === "client") redirect("/mon-espace");
     redirect("/login");
   }
 

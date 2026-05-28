@@ -90,6 +90,13 @@ summary::-webkit-details-marker { display: none; }
   border: 1px solid rgba(0,0,0,0.06);
 }
 .btn-ghost:hover { background: rgba(255,255,255,0.95); }
+.btn-ghost[aria-current="page"] {
+  background: rgba(195, 35, 83, 0.1);
+  color: var(--logo-red-dark);
+  border-color: rgba(195, 35, 83, 0.35);
+  box-shadow: 0 0 0 2px rgba(195, 35, 83, 0.14);
+  font-weight: 700;
+}
 
 .card {
   border-radius: 1rem;

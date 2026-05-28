@@ -9,6 +9,7 @@ import { useRef, useState } from "react";
 import { comingSoonCopy as C } from "./copy";
 import { ComingSoonHeroFrame84 } from "./ComingSoonHeroFrame84";
 import { ComingSoonWaitlistForm } from "./ComingSoonWaitlistForm";
+import type { PublicTestimonial } from "@/lib/public-testimonials";
 import {
   easeOut,
   HeroEnter,
@@ -119,7 +120,17 @@ function ReasonsList({ bullets }: { bullets: readonly string[] }) {
   );
 }
 
-export function ComingSoonContent() {
+function TestimonialStars({ rating }: { rating: number | null }) {
+  if (rating == null) return null;
+  return (
+    <p className="mt-2 text-xs text-amber-600" aria-label={`Note ${rating} sur 5`}>
+      {"★".repeat(rating)}
+      <span className="text-gray-300">{"★".repeat(5 - rating)}</span>
+    </p>
+  );
+}
+
+export function ComingSoonContent({ testimonials }: { testimonials: PublicTestimonial[] }) {
   const formRef = useRef<HTMLElement | null>(null);
   const [newsOk, setNewsOk] = useState(false);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -310,34 +321,44 @@ export function ComingSoonContent() {
             <Reveal className="mx-auto mt-3 max-w-xl text-center" delay={0.07}>
               <p className="text-gray-600">{C.testimonials.sectionLead}</p>
             </Reveal>
-            <StaggerGroup className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
-              {C.testimonials.items.map((t) => (
-                <StaggerItem key={t.name}>
-                  <motion.figure
-                    className="h-full rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm"
-                    whileHover={{ y: -5, boxShadow: "0 16px 36px rgba(0,0,0,0.08)" }}
-                    transition={{ duration: 0.3, ease: easeOut }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <motion.div
-                        className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--coming-soon-accent)] text-sm font-bold text-white"
-                        whileHover={{ scale: 1.08, rotate: [0, -4, 4, 0] }}
-                        transition={{ duration: 0.45 }}
+            {testimonials.length === 0 ? (
+              <p className="mt-12 text-center text-sm text-gray-500">
+                Les témoignages de nos clients apparaîtront ici prochainement.
+              </p>
+            ) : (
+              <StaggerGroup className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
+                {testimonials.map((t) => {
+                  const location = [t.city, t.country].filter(Boolean).join(", ");
+                  return (
+                    <StaggerItem key={t.id}>
+                      <motion.figure
+                        className="h-full rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm"
+                        whileHover={{ y: -5, boxShadow: "0 16px 36px rgba(0,0,0,0.08)" }}
+                        transition={{ duration: 0.3, ease: easeOut }}
                       >
-                        {t.name.charAt(0)}
-                      </motion.div>
-                      <div>
-                        <figcaption className="text-sm font-semibold text-gray-900">{t.name}</figcaption>
-                        <p className="text-xs text-gray-500">{t.location}</p>
-                      </div>
-                    </div>
-                    <blockquote className="mt-3 text-xs leading-relaxed text-gray-600 md:text-sm">
-                      « {t.quote} »
-                    </blockquote>
-                  </motion.figure>
-                </StaggerItem>
-              ))}
-            </StaggerGroup>
+                        <div className="flex items-center gap-3">
+                          <motion.div
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--coming-soon-accent)] text-sm font-bold text-white"
+                            whileHover={{ scale: 1.08, rotate: [0, -4, 4, 0] }}
+                            transition={{ duration: 0.45 }}
+                          >
+                            {t.clientName.charAt(0)}
+                          </motion.div>
+                          <div>
+                            <figcaption className="text-sm font-semibold text-gray-900">{t.clientName}</figcaption>
+                            <p className="text-xs text-gray-500">{location}</p>
+                          </div>
+                        </div>
+                        <blockquote className="mt-3 text-xs leading-relaxed text-gray-600 md:text-sm">
+                          « {t.message} »
+                        </blockquote>
+                        <TestimonialStars rating={t.rating} />
+                      </motion.figure>
+                    </StaggerItem>
+                  );
+                })}
+              </StaggerGroup>
+            )}
           </div>
         </section>
       </main>

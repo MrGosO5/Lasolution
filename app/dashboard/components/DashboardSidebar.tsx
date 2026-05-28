@@ -4,8 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ pendingTestimonials = 0 }: { pendingTestimonials?: number }) {
   const pathname = usePathname();
+  const pendingBadge =
+    pendingTestimonials > 0
+      ? pendingTestimonials > 99
+        ? "99+"
+        : String(pendingTestimonials)
+      : null;
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(path + "/");
@@ -40,7 +46,8 @@ export function DashboardSidebar() {
               !pathname.includes("/utilisateurs") &&
               !pathname.includes("/commandes") &&
               !pathname.includes("/parametres") &&
-              !pathname.includes("/demandes")
+              !pathname.includes("/demandes") &&
+              !pathname.includes("/avis")
           )}
         >
           <DashboardIcon
@@ -49,7 +56,8 @@ export function DashboardSidebar() {
               !pathname.includes("/utilisateurs") &&
               !pathname.includes("/commandes") &&
               !pathname.includes("/parametres") &&
-              !pathname.includes("/demandes")
+              !pathname.includes("/demandes") &&
+              !pathname.includes("/avis")
                 ? "text-figma-activeMenuText"
                 : "text-figma-label"
             }
@@ -94,6 +102,26 @@ export function DashboardSidebar() {
             }
           />
           <span>Demandes</span>
+        </Link>
+        <Link
+          href="/dashboard/avis?status=PENDING"
+          className={`${linkClass(pathname.includes("/avis"))} relative`}
+        >
+          <StarIcon
+            className={
+              pathname.includes("/avis") ? "text-figma-activeMenuText" : "text-figma-label"
+            }
+          />
+          <span className="flex-1">Avis</span>
+          {pendingBadge ? (
+            <span
+              className="ml-auto min-w-[1.35rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px] font-bold leading-none flex items-center justify-center"
+              title={`${pendingTestimonials} avis en attente`}
+              aria-label={`${pendingTestimonials} avis en attente de validation`}
+            >
+              {pendingBadge}
+            </span>
+          ) : null}
         </Link>
         <Link
           href="/dashboard/parametres"
@@ -175,6 +203,26 @@ function InboxIcon({ className }: { className?: string }) {
     >
       <path d="M2 12l3-7h14l3 7v5a2 2 0 01-2 2H4a2 2 0 01-2-2v-5z" stroke="currentColor" strokeWidth="1.3" />
       <path d="M2 12h5l1.5 3h7L17 12h5" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      className={`shrink-0 ${className ?? "text-figma-label"}`}
+      aria-hidden
+    >
+      <path
+        d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
