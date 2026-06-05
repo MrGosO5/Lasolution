@@ -1,14 +1,28 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
 import { Logo } from "./components/Logo";
 import { Reveal } from "./site/components/Reveal";
 import { SocialLinksRow } from "./site/components/SocialLinksRow";
 import { ComingSoonWaitlistForm } from "./coming-soon/ComingSoonWaitlistForm";
 import { PublicTestimonialsSection } from "@/app/site/components/PublicTestimonialsSection";
+import { authOptions } from "@/lib/auth";
+import { partnerPathByRole } from "@/lib/partner-routes";
+import type { AppRole } from "@/types/app-role";
 
 /** Témoignages issus de la BDD — pas de cache page statique (5 min avant). */
 export const revalidate = 0;
 
-export default function AccueilPage() {
+function accountHrefForRole(role: AppRole | undefined): string {
+  if (role === "admin") return "/dashboard";
+  if (role === "client") return "/mon-espace";
+  const partnerPath = role ? partnerPathByRole[role] : undefined;
+  return partnerPath ?? "/mon-espace";
+}
+
+export default async function AccueilPage() {
+  const session = await getServerSession(authOptions);
+  const isAuthed = Boolean(session?.user?.id);
+  const accountHref = accountHrefForRole(session?.user?.role as AppRole | undefined);
   return (
     <main>
       <section className="relative overflow-hidden">
@@ -37,7 +51,23 @@ export default function AccueilPage() {
                   Faites vos achats ou envoyez un colis à vos proches en toute confiance, on s’occupe de tout.
                 </p>
 
-                {/* CTA temporairement masqués */}
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-1">
+                  {isAuthed ? (
+                    <Link href={accountHref} className="btn btn-primary">
+                      Mon espace
+                    </Link>
+                  ) : (
+                    <>
+                      <Link href="/connexion" className="btn btn-primary">
+                        Se connecter
+                      </Link>
+                      <Link href="/inscription" className="btn btn-ghost">
+                        S&apos;inscrire
+                      </Link>
+                    </>
+                  )}
+                </div>
+
                 <SocialLinksRow className="pt-2" />
               </div>
             </Reveal>
