@@ -1,17 +1,16 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { decode } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth";
 import { getNextAuthSecret } from "@/lib/nextauth-secret";
 import { parseJwtSub } from "@/lib/jwt-payload";
-
-function apiBaseUrl() {
-  return (
-    process.env.INTERNAL_AUTH_API_URL ||
-    process.env.AUTH_API_URL ||
-    "http://localhost:4000"
-  ).replace(/\/$/, "");
-}
+import {
+  accessTokenExpired,
+  backendApiBaseUrl,
+  MIDDLEWARE_ACCESS_HEADER,
+  nextAuthSessionCookieName,
+  refreshBackendTokens,
+} from "@/lib/backend-token-utils";
 
 const DEMO_CLIENT_EMAIL = "client@lasolution.demo";
 const LEGACY_DEMO_CLIENT_SUB = "client-client@lasolution.demo";
@@ -19,7 +18,7 @@ const LEGACY_DEMO_CLIENT_SUB = "client-client@lasolution.demo";
 /** Récupère un jeton API frais pour le client démo (contourne un vieux Bearer en cookie). */
 async function fetchFreshDemoClientAccessToken(): Promise<string | null> {
   const password = process.env.CLIENT_PASSWORD || "client";
-  const res = await fetch(`${apiBaseUrl()}/auth/login`, {
+  const res = await fetch(`${backendApiBaseUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: DEMO_CLIENT_EMAIL, password }),
@@ -32,59 +31,53 @@ async function fetchFreshDemoClientAccessToken(): Promise<string | null> {
   return token;
 }
 
-function accessTokenExpired(token: string, skewSeconds = 45): boolean {
-  try {
-    const part = token.split(".")[1];
-    if (!part) return true;
-    const payload = JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as { exp?: number };
-    if (!payload.exp) return true;
-    return payload.exp * 1000 <= Date.now() + skewSeconds * 1000;
-  } catch {
-    return true;
-  }
+function sessionCookieName(secure: boolean): string {
+  return nextAuthSessionCookieName(secure);
 }
 
-function sessionCookieName(secure: boolean): string {
-  return secure ? "__Secure-next-auth.session-token" : "next-auth.session-token";
+function isSecureCookie(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.NEXTAUTH_URL?.startsWith("https://") === true
+  );
 }
 
 async function readJwtPayload() {
   const cookieStore = await cookies();
   const secret = getNextAuthSecret();
-  const secure =
-    process.env.NODE_ENV === "production" ||
-    process.env.NEXTAUTH_URL?.startsWith("https://") === true;
-  const sessionToken = cookieStore.get(sessionCookieName(secure))?.value;
+  const sessionToken = cookieStore.get(sessionCookieName(isSecureCookie()))?.value;
   if (!sessionToken) return null;
   return decode({ token: sessionToken, secret });
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
-  const res = await fetch(`${apiBaseUrl()}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-
-  const data = (await res.json()) as { accessToken?: string };
-  return data.accessToken ?? null;
+function pickValidAccessToken(token: string | null | undefined): string | null {
+  if (!token || token.length === 0) return null;
+  return accessTokenExpired(token) ? null : token;
 }
 
 /**
  * Jeton Bearer API pour SSR : lit le JWT NextAuth, rafraîchit si expiré (~15 min).
+ * Le middleware peut injecter un jeton frais via en-tête pour la requête en cours.
  */
 export async function getBackendAccessToken(options?: { forceRefresh?: boolean }): Promise<string | null> {
+  const headerStore = await headers();
+  const fromMiddleware = headerStore.get(MIDDLEWARE_ACCESS_HEADER);
+  if (fromMiddleware && !accessTokenExpired(fromMiddleware)) {
+    return fromMiddleware;
+  }
+
   const jwt = await readJwtPayload();
   const fromJwt = typeof jwt?.accessToken === "string" ? jwt.accessToken : null;
 
-  if (!options?.forceRefresh && fromJwt && !accessTokenExpired(fromJwt)) {
-    if (parseJwtSub(fromJwt) === LEGACY_DEMO_CLIENT_SUB) {
-      const fresh = await fetchFreshDemoClientAccessToken();
-      if (fresh) return fresh;
+  if (!options?.forceRefresh) {
+    const validJwt = pickValidAccessToken(fromJwt);
+    if (validJwt) {
+      if (parseJwtSub(validJwt) === LEGACY_DEMO_CLIENT_SUB) {
+        const fresh = await fetchFreshDemoClientAccessToken();
+        if (fresh) return fresh;
+      }
+      return validJwt;
     }
-    return fromJwt;
   }
 
   const refresh =
@@ -92,15 +85,10 @@ export async function getBackendAccessToken(options?: { forceRefresh?: boolean }
       ? jwt.refreshToken
       : null;
   if (refresh) {
-    const renewed = await refreshAccessToken(refresh);
-    if (renewed) return renewed;
+    const renewed = await refreshBackendTokens(refresh);
+    if (renewed) return renewed.accessToken;
   }
 
   const session = await getServerSession(authOptions);
-  const fromSession = session?.user?.accessToken;
-  if (fromSession && !accessTokenExpired(fromSession)) {
-    return fromSession;
-  }
-
-  return typeof fromSession === "string" && fromSession.length > 0 ? fromSession : null;
+  return pickValidAccessToken(session?.user?.accessToken);
 }

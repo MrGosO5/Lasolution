@@ -54,6 +54,12 @@ export async function SiteFooter() {
             <Link className="text-gray-700 hover:text-gray-900" href="/politique-de-confidentialite">
               Politique de confidentialité
             </Link>
+            <Link className="text-gray-700 hover:text-gray-900" href="/conditions-generales">
+              CGU / CGV
+            </Link>
+            <Link className="text-gray-700 hover:text-gray-900" href="/mentions-legales">
+              Mentions légales
+            </Link>
             {isAuthed && isClient ? (
               <Link className="text-gray-700 hover:text-gray-900" href="/carte">
                 Carte de paiement

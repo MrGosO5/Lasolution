@@ -12,7 +12,7 @@ Docs liées : [`admin-ops-backoffice.md`](./admin-ops-backoffice.md), schéma [`
 |------|------|
 | **Client** | 1 avis par commande **livrée** ; création / édition si non publié |
 | **Admin** | Modération `PENDING` → `APPROVED` / `REJECTED` sur `/dashboard/avis` |
-| **Public** | Accueil + coming-soon : avis **APPROVED** uniquement |
+| **Public** | Accueil (`/`) : avis **APPROVED** et `isDemo: false` uniquement |
 
 Le **client ne voit pas** le statut de modération (ni sur `/mes-avis`, ni sur le détail commande).
 
@@ -21,7 +21,8 @@ Le **client ne voit pas** le statut de modération (ni sur `/mes-avis`, ni sur l
 ## BDD
 
 - Modèle `OrderTestimonial` : `status` (`PENDING` \| `APPROVED` \| `REJECTED`), `rejectReason`, modération.
-- Migration : `backend/prisma/migrations/20260528120000_testimonial_moderation/`
+- Migration modération : `backend/prisma/migrations/20260528120000_testimonial_moderation/`
+- Migration suivante (défauts Prisma) : `backend/prisma/migrations/20260528150047_avis/`
 
 ---
 
@@ -81,16 +82,17 @@ Depuis la **racine** du repo (`.env.local` à la racine avec `DATABASE_URL`, `NE
 npm install
 cd backend && npm install && cd ..
 
-# 2. Migrations + client Prisma
+# 2. Migrations + client Prisma (depuis backend/)
 cd backend
 npm run db:env:sync
 npm run db:migrate
 npm run db:generate
 
-# 3. Seeds (obligatoire dans cet ordre)
+# 3. Seeds (obligatoire dans cet ordre — depuis backend/ ou racine, voir ci-dessous)
 npm run db:seed
 npm run db:seed:demo-orders
 npm run db:seed:demo-testimonials
+cd ..
 ```
 
 Depuis la **racine** — serveurs :

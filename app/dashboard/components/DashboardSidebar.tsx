@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BRAND_ICON_SRC } from "@/lib/brand-logo";
 
 export function DashboardSidebar({ pendingTestimonials = 0 }: { pendingTestimonials?: number }) {
   const pathname = usePathname();
@@ -31,7 +32,7 @@ export function DashboardSidebar({ pendingTestimonials = 0 }: { pendingTestimoni
         aria-label="Accueil La Solution"
       >
         <Image
-          src="/icon/logolasolution.png"
+          src={BRAND_ICON_SRC}
           alt="La Solution"
           fill
           sizes="170px"

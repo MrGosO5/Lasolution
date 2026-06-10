@@ -29,16 +29,16 @@ export function ClientEspaceHub({ session }: { session: Session }) {
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {tabs.map((t, idx) => (
-          <Reveal key={t.href} delayMs={80 + idx * 70}>
-            <Link href={t.href} className="card p-6 focus-ring">
+          <Reveal key={t.href} delayMs={80 + idx * 70} className="h-full">
+            <Link href={t.href} className="card h-full p-6 focus-ring">
               <p className="text-sm font-semibold text-gray-900">{t.title}</p>
               <p className="mt-2 text-sm text-gray-600 leading-relaxed">{t.desc}</p>
               <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
             </Link>
           </Reveal>
         ))}
-        <Reveal delayMs={80 + tabs.length * 70}>
-          <Link href="/boutiques" className="card p-6 focus-ring">
+        <Reveal delayMs={80 + tabs.length * 70} className="h-full">
+          <Link href="/boutiques" className="card h-full p-6 focus-ring">
             <p className="text-sm font-semibold text-gray-900">Reprendre mes achats</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
               Parcourez les boutiques et ajoutez des produits au panier.

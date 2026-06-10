@@ -151,6 +151,7 @@ model OrderTestimonial {
   rating       Int?
   photoUrl     String?
   status       TestimonialStatus @default(PENDING)
+  isDemo       Boolean           @default(false)
   rejectReason String?           @db.Text
   reviewedAt   DateTime?
   reviewedBy   String?
@@ -159,6 +160,7 @@ model OrderTestimonial {
 
   @@index([userId])
   @@index([status, createdAt])
+  @@index([status, isDemo])
 }
 
 model OrderLine {

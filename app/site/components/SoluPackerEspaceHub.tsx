@@ -40,8 +40,8 @@ export function SoluPackerEspaceHub() {
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-3">
       {cards.map((c, idx) => (
-        <Reveal key={c.href} delayMs={80 + idx * 70}>
-          <Link href={c.href} className="card p-6 focus-ring">
+        <Reveal key={c.href} delayMs={80 + idx * 70} className="h-full">
+          <Link href={c.href} className="card h-full p-6 focus-ring">
             <p className="text-sm font-semibold text-gray-900">{c.title}</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">{c.desc}</p>
             <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>

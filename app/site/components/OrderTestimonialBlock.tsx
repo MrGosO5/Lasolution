@@ -207,6 +207,11 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
                 {testimonial.clientName} — {testimonial.city}, {testimonial.country}
                 {testimonial.rating != null ? ` · ${testimonial.rating}/5` : ""}
               </p>
+              {canEdit ? (
+                <p className="mt-2 text-xs text-gray-500">
+                  Votre avis peut être modifié avant publication.
+                </p>
+              ) : null}
             </div>
             {existingPhoto ? (
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl ring-1 ring-black/10">
@@ -257,7 +262,7 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
             </h2>
             <p className="mt-2 text-sm text-gray-600">
               {isEdit
-                ? "Vous pouvez mettre à jour votre message, votre note ou votre photo."
+                ? "Vous pouvez mettre à jour votre message, votre note ou votre photo. Votre avis peut être modifié avant publication."
                 : "Partagez votre expérience (champs marqués * sont obligatoires). Un seul avis par commande."}
             </p>
 
@@ -317,7 +322,7 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
                 </select>
               </label>
               <label className="grid gap-1 text-sm">
-                <span className="font-medium text-gray-800">Photo (optionnel, JPG/PNG, max 5 Mo)</span>
+                <span className="font-medium text-gray-800">Photo (optionnel, JPG/PNG, max 1 Mo)</span>
                 {existingPhoto && !photoDataUrl && !removePhoto ? (
                   <div className="flex items-center gap-3">
                     <div className="relative h-14 w-14 overflow-hidden rounded-lg ring-1 ring-black/10">
@@ -342,8 +347,8 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
                       setPhotoDataUrl(null);
                       return;
                     }
-                    if (file.size > 5 * 1024 * 1024) {
-                      setError("La photo doit faire au plus 5 Mo.");
+                    if (file.size > 1 * 1024 * 1024) {
+                      setError("La photo doit faire au plus 1 Mo.");
                       setPhotoDataUrl(null);
                       return;
                     }

@@ -13,6 +13,7 @@ type ComingSoonWaitlistFormProps = {
    */
   withFrame?: boolean;
   className?: string;
+  onSubmitSuccess?: () => void;
 };
 
 function apiErrorMessage(data: unknown, fallback: string): string {
@@ -24,7 +25,7 @@ function apiErrorMessage(data: unknown, fallback: string): string {
   return fallback;
 }
 
-export function ComingSoonWaitlistForm({ withFrame = true, className }: ComingSoonWaitlistFormProps) {
+export function ComingSoonWaitlistForm({ withFrame = true, className, onSubmitSuccess }: ComingSoonWaitlistFormProps) {
   const [tab, setTab] = useState<"buyer" | "pro">("buyer");
   const [waitlistOk, setWaitlistOk] = useState(false);
   const [waitlistLoading, setWaitlistLoading] = useState(false);
@@ -58,6 +59,7 @@ export function ComingSoonWaitlistForm({ withFrame = true, className }: ComingSo
         return;
       }
       setWaitlistOk(true);
+      onSubmitSuccess?.();
     } catch {
       setWaitlistError(C.form.submitNetworkError);
     } finally {

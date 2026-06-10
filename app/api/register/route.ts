@@ -12,11 +12,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
-  const res = await fetch(`${apiBase()}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase()}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error("[register] backend fetch:", err);
+    return NextResponse.json(
+      {
+        error:
+          "Le serveur d'application n'est pas joignable. En local : lancez `npm run backend:dev` (port 4000), ou utilisez `npm run start:dev` pour démarrer frontend + backend.",
+      },
+      { status: 503 },
+    );
+  }
 
   const data = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
   return NextResponse.json(data, { status: res.status });
