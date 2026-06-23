@@ -16,7 +16,7 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-black/5 bg-white/60 backdrop-blur-md">
       <div className="site-container flex items-center justify-between py-4">
-        <Link href="/" className="focus-ring shrink-0 rounded-xl">
+        <Link href="/" className="focus-ring inline-flex shrink-0 items-center rounded-xl py-0.5">
           <span className="sr-only">La Solution</span>
           <Logo />
         </Link>

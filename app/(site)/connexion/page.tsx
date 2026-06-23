@@ -20,6 +20,7 @@ export default function ConnexionSitePage() {
   const { data: session, status } = useSession();
   const justRegistered = searchParams.get("registered") === "1";
   const justReset = searchParams.get("reset") === "1";
+  const sessionExpired = searchParams.get("session") === "expired";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +102,11 @@ export default function ConnexionSitePage() {
               {justReset ? (
                 <p className="text-sm text-emerald-900 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200">
                   Mot de passe réinitialisé. Connectez-vous avec votre nouvelle combinaison.
+                </p>
+              ) : null}
+              {sessionExpired ? (
+                <p className="text-sm text-amber-950 rounded-xl bg-amber-50 px-4 py-3 ring-1 ring-amber-200">
+                  Votre session a expiré. Reconnectez-vous pour continuer.
                 </p>
               ) : null}
               {error ? <p className="text-sm text-red-700 rounded-xl bg-red-50 px-4 py-3 ring-1 ring-red-200">{error}</p> : null}

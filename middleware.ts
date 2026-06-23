@@ -5,6 +5,14 @@ import type { AppRole } from "@/types/app-role";
 import { getNextAuthSecret } from "@/lib/nextauth-secret";
 import { partnerPathByRole, roleForPartnerSpace } from "@/lib/partner-routes";
 import {
+  attachRefreshedSessionCookie,
+  backendTokenRefreshFailed,
+  nextResponseWithBackendRefresh,
+  prepareBackendTokenRefresh,
+  type BackendTokenRefreshContext,
+} from "@/lib/middleware-backend-token";
+import { nextAuthSessionCookieName } from "@/lib/backend-token-utils";
+import {
   SITE_PREVIEW_COOKIE,
   getSitePreviewSecret,
   isSitePreviewBypassPath,
@@ -47,6 +55,10 @@ function redirectForRole(role: AppRole, base: URL): URL {
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
+  if (path === "/coming-soon") {
+    return NextResponse.redirect(new URL("/", req.url), { status: 302 });
+  }
+
   if (isSitePreviewEnabled()) {
     const previewSecret = getSitePreviewSecret();
     if (previewSecret && !isSitePreviewBypassPath(path)) {
@@ -62,11 +74,31 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  const secureCookie = secureCookieForRequest(req);
   const token = await getToken({
     req,
     secret: getNextAuthSecret(),
-    secureCookie: secureCookieForRequest(req),
+    secureCookie,
   });
+
+  let backendRefresh: BackendTokenRefreshContext | null = null;
+  if (token) {
+    backendRefresh = await prepareBackendTokenRefresh(token);
+  }
+
+  function finish(res: NextResponse): NextResponse {
+    if (backendRefresh) {
+      return attachRefreshedSessionCookie(res, backendRefresh, secureCookie);
+    }
+    return res;
+  }
+
+  function next(): NextResponse {
+    if (backendRefresh) {
+      return nextResponseWithBackendRefresh(req, backendRefresh, secureCookie);
+    }
+    return NextResponse.next();
+  }
 
   /** Session déjà active : éviter d’afficher le formulaire sous le header « connecté ». */
   if (token && (path === "/connexion" || path === "/login")) {
@@ -82,12 +114,12 @@ export async function middleware(req: NextRequest) {
     if (role && knownRoles.includes(role)) {
       const dest = redirectForRole(role, req.nextUrl);
       if (dest.pathname !== "/connexion" && dest.pathname !== "/login") {
-        return NextResponse.redirect(dest);
+        return finish(NextResponse.redirect(dest));
       }
     }
     // Cookie de session valide mais rôle absent / inconnu, ou redirectForRole a renvoyé login — sortir de la page login
     if (token.sub || token.email) {
-      return NextResponse.redirect(new URL("/mon-espace", req.nextUrl));
+      return finish(NextResponse.redirect(new URL("/mon-espace", req.nextUrl)));
     }
   }
 
@@ -105,37 +137,47 @@ export async function middleware(req: NextRequest) {
     }
 
     const role = token.role as AppRole;
+    const needsBackendApi = isSiteRoute || isAdminRoute || isPackerRoute;
+
+    if (needsBackendApi && backendRefresh && backendTokenRefreshFailed(backendRefresh)) {
+      const loginUrl = new URL("/connexion", req.url);
+      loginUrl.searchParams.set("session", "expired");
+      loginUrl.searchParams.set("callbackUrl", path);
+      const expired = NextResponse.redirect(loginUrl);
+      expired.cookies.delete(nextAuthSessionCookieName(secureCookie));
+      return expired;
+    }
 
     if (isAdminRoute && role !== "admin") {
-      return NextResponse.redirect(redirectForRole(role, req.nextUrl));
+      return finish(NextResponse.redirect(redirectForRole(role, req.nextUrl)));
     }
     if (isClientRoute && role !== "client") {
-      return NextResponse.redirect(redirectForRole(role, req.nextUrl));
+      return finish(NextResponse.redirect(redirectForRole(role, req.nextUrl)));
     }
     if (isPartnerRoute) {
       const segment = path.split("/")[2];
       const required = roleForPartnerSpace(segment || "");
       if (!required || role !== required) {
-        return NextResponse.redirect(redirectForRole(role, req.nextUrl));
+        return finish(NextResponse.redirect(redirectForRole(role, req.nextUrl)));
       }
     }
     if (isSiteRoute) {
       // Pages privées "client" dans l'expérience e-commerce
       if (role !== "client" && role !== "admin") {
-        return NextResponse.redirect(redirectForRole(role, req.nextUrl));
+        return finish(NextResponse.redirect(redirectForRole(role, req.nextUrl)));
       }
-      return NextResponse.next();
+      return next();
     }
     if (isPackerRoute) {
       // Missions: packer (ou admin)
       if (role !== "solupacker" && role !== "admin") {
-        return NextResponse.redirect(redirectForRole(role, req.nextUrl));
+        return finish(NextResponse.redirect(redirectForRole(role, req.nextUrl)));
       }
-      return NextResponse.next();
+      return next();
     }
   }
 
-  return NextResponse.next();
+  return next();
 }
 
 export const config = {

@@ -62,7 +62,6 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (res.ok) {
     revalidateTag(PUBLIC_TESTIMONIALS_CACHE_TAG);
     revalidatePath("/");
-    revalidatePath("/coming-soon");
   }
 
   return NextResponse.json(data, { status: res.status });

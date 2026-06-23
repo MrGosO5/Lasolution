@@ -139,6 +139,11 @@ export default async function MesAvisPage() {
                   <blockquote className="mt-4 text-sm text-gray-700 leading-relaxed border-l-2 border-[var(--logo-red)]/30 pl-4">
                     « {t.message} »
                   </blockquote>
+                  {t.status !== "APPROVED" ? (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Votre avis peut être modifié avant publication.
+                    </p>
+                  ) : null}
                   <Stars rating={t.rating} />
                 </article>
               </Reveal>

@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { requireAuth, requireRoles } = require("../middleware/auth");
 const { saveTestimonialPhoto, deleteProofByPublicPath } = require("../utils/mediaProof");
+const { validateTestimonialContent } = require("../utils/testimonialContent");
 
 const TESTIMONIAL_SELECT_PUBLIC = {
   id: true,
@@ -39,18 +40,9 @@ function isOrderDelivered(order) {
 }
 
 function parseTestimonialFields(body) {
-  const { clientName, city, country, message, rating } = body || {};
-  const nameTrim = String(clientName || "").trim();
-  const cityTrim = String(city || "").trim();
-  const countryTrim = String(country || "").trim();
-  const msgTrim = String(message || "").trim();
-
-  if (!nameTrim || !cityTrim || !countryTrim) {
-    return { error: "Nom, ville et pays sont obligatoires." };
-  }
-  if (msgTrim.length < 20) {
-    return { error: "Le message doit contenir au moins 20 caractères." };
-  }
+  const { rating } = body || {};
+  const validated = validateTestimonialContent(body || {});
+  if (validated.error) return validated;
 
   let ratingNum = null;
   if (rating != null && rating !== "") {
@@ -61,7 +53,27 @@ function parseTestimonialFields(body) {
     ratingNum = n;
   }
 
-  return { data: { clientName: nameTrim, city: cityTrim, country: countryTrim, message: msgTrim, rating: ratingNum } };
+  return { data: { ...validated.data, rating: ratingNum } };
+}
+
+function testimonialAuditSnapshot(row) {
+  return {
+    status: row.status,
+    clientName: row.clientName,
+    city: row.city,
+    country: row.country,
+    rating: row.rating,
+  };
+}
+
+function publicTestimonialsWhere() {
+  const includeDemo =
+    process.env.NODE_ENV !== "production" &&
+    process.env.INCLUDE_DEMO_TESTIMONIALS === "true";
+  return {
+    status: "APPROVED",
+    ...(includeDemo ? {} : { isDemo: false }),
+  };
 }
 
 async function resolvePhotoUrl({ testimonialId, photoDataUrl, removePhoto, existingPhotoUrl }) {
@@ -121,10 +133,11 @@ function setupTestimonialRoutes(app, getPrisma) {
     const skip = (page - 1) * limit;
 
     try {
+      const where = publicTestimonialsWhere();
       const [total, data] = await Promise.all([
-        prisma.orderTestimonial.count({ where: { status: "APPROVED" } }),
+        prisma.orderTestimonial.count({ where }),
         prisma.orderTestimonial.findMany({
-          where: { status: "APPROVED" },
+          where,
           orderBy: [{ reviewedAt: "desc" }, { createdAt: "desc" }],
           skip,
           take: limit,
@@ -262,7 +275,12 @@ function setupTestimonialRoutes(app, getPrisma) {
           entityType: "OrderTestimonial",
           entityId: row.id,
           before: { status: existing.status },
-          after: { status: row.status, rejectReason: row.rejectReason },
+          after: {
+            testimonialId: row.id,
+            oldStatus: existing.status,
+            newStatus: row.status,
+            reason: row.rejectReason ?? null,
+          },
         },
       });
       res.json(row);
@@ -421,7 +439,11 @@ function setupTestimonialRoutes(app, getPrisma) {
           action: "order.testimonial.updated",
           entityType: "OrderTestimonial",
           entityId: row.id,
-          after: { status: row.status },
+          before: testimonialAuditSnapshot(order.testimonial),
+          after: {
+            testimonialId: row.id,
+            ...testimonialAuditSnapshot(row),
+          },
         },
       });
       res.json(row);

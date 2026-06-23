@@ -140,6 +140,7 @@ async function main() {
         message: row.message,
         rating: row.rating,
         status: "APPROVED",
+        isDemo: true,
         reviewedAt,
         reviewedBy: ADMIN_ID,
       },
@@ -158,6 +159,7 @@ async function main() {
       message: PENDING.message,
       rating: PENDING.rating,
       status: "PENDING",
+      isDemo: true,
     },
   });
 

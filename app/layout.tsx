@@ -12,11 +12,6 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "La Solution",
   description: "La Solution - Transport France vers Afrique",
-  icons: {
-    icon: "/icon/logolasolution.png",
-    shortcut: "/icon/logolasolution.png",
-    apple: "/icon/logolasolution.png",
-  },
 };
 
 export default function RootLayout({
