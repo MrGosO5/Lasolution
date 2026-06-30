@@ -18,6 +18,28 @@ const {
   sendComingSoonNewsletterEmailJs,
 } = require("../emails/emailjsComingSoon");
 const { passwordResetEmail } = require("../emails/templates");
+const {
+  submitApplication,
+  acceptApplication,
+  refuseApplication,
+  getApplicationDocument,
+  ApplicationError,
+  APPLICATION_TYPES,
+} = require("../services/applicationService");
+const { ALL_APPLICATION_TYPES } = require("../constants/applications");
+
+const APPLICATION_BODY_MAX_BYTES = 8 * 1024 * 1024; // 8 Mo — candidatures avec documents base64
+
+/** Rejette tôt les payloads trop volumineux (plan point 10). */
+function applicationBodyLimit(req, res, next) {
+  const raw = req.get("content-length");
+  if (!raw) return next();
+  const len = parseInt(raw, 10);
+  if (Number.isFinite(len) && len > APPLICATION_BODY_MAX_BYTES) {
+    return res.status(413).json({ error: "Payload trop volumineux (max 8 Mo)." });
+  }
+  next();
+}
 
 function getPrisma() {
   try {
@@ -523,67 +545,25 @@ function setupPublicTripDeclaration(app) {
 }
 
 /**
- * Demande de partenariat point relais (formulaire multi-étapes) — SecurityEvent + email équipe.
+ * Demande de partenariat point relais (formulaire multi-étapes) — SecurityEvent + documents privés + email équipe.
  */
 function setupPublicPartnerRelayApplication(app) {
-  app.post("/public/partner-relay-application", async (req, res) => {
+  app.post("/public/partner-relay-application", applicationBodyLimit, async (req, res) => {
     const prisma = getPrisma();
-    const body = req.body || {};
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase().slice(0, 320) : "";
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "email valide requis." });
-    }
-    if (!prisma) {
-      return res.status(503).json({ error: "Base indisponible." });
-    }
-    let meta;
     try {
-      meta = JSON.parse(JSON.stringify(body));
-    } catch {
-      return res.status(400).json({ error: "payload invalide." });
-    }
-    if (JSON.stringify(meta).length > 20000) {
-      return res.status(400).json({ error: "Données trop volumineuses." });
-    }
-    try {
-      await prisma.securityEvent.create({
-        data: {
-          type: "partner_relay_application",
-          email,
-          ip: req.ip || null,
-          userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
-          meta: { ...meta, submittedAt: new Date().toISOString() },
-        },
+      const result = await submitApplication(prisma, {
+        applicationType: APPLICATION_TYPES.RELAY,
+        body: req.body || {},
+        ip: req.ip || null,
+        userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
       });
+      res.json(result);
     } catch (e) {
+      if (e instanceof ApplicationError) {
+        return res.status(e.statusCode).json({ error: e.message });
+      }
       return res.status(500).json({ error: String(e.message || e) });
     }
-
-    const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
-    const name = [body.firstName, body.lastName].filter(Boolean).join(" ").trim() || "Candidat";
-    const text = [
-      "Nouvelle demande Point relais partenaire.",
-      "",
-      `Email: ${email}`,
-      `Nom: ${name}`,
-      `Téléphone: ${body.phone || "—"}`,
-      "",
-      "Détails complets en base (SecurityEvent type partner_relay_application).",
-    ].join("\n");
-    try {
-      const transporter = createSmtpTransporter();
-      await transporter.sendMail({
-        from: buildMailFrom(),
-        to,
-        subject: `[Point relais] Demande — ${name}`,
-        text,
-        replyTo: email,
-      });
-    } catch (mailErr) {
-      console.warn("[public/partner-relay-application] email non envoyé:", mailErr?.message || mailErr);
-    }
-
-    res.json({ ok: true });
   });
 }
 
@@ -875,8 +855,7 @@ function setupAdminApplicationsRoute(app) {
     const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 120) : "";
     const appType = typeof req.query.type === "string" ? req.query.type : "";
 
-    const allowedTypes = ["partner_relay_application", "solupacker_application"];
-    const typeFilter = allowedTypes.includes(appType) ? [appType] : allowedTypes;
+    const typeFilter = ALL_APPLICATION_TYPES.includes(appType) ? [appType] : ALL_APPLICATION_TYPES;
 
     const where = { type: { in: typeFilter } };
     if (search) {
@@ -903,70 +882,82 @@ function setupAdminApplicationsRoute(app) {
       res.status(500).json({ error: String(e.message || e) });
     }
   });
-}
 
-/** Demande solupacker (formulaire multi-étapes) — SecurityEvent + email équipe. */
-function setupPublicSolupackerApplication(app) {
-  app.post("/public/solupacker-application", async (req, res) => {
+  app.patch("/admin/applications/:id/accept", ...guard, async (req, res) => {
     const prisma = getPrisma();
-    const body = req.body || {};
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase().slice(0, 320) : "";
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "email valide requis." });
-    }
-    if (!prisma) {
-      return res.status(503).json({ error: "Base indisponible." });
-    }
-    let meta;
     try {
-      meta = JSON.parse(JSON.stringify(body));
-    } catch {
-      return res.status(400).json({ error: "payload invalide." });
-    }
-    if (JSON.stringify(meta).length > 20000) {
-      return res.status(400).json({ error: "Données trop volumineuses." });
-    }
-    try {
-      await prisma.securityEvent.create({
-        data: {
-          type: "solupacker_application",
-          email,
-          ip: req.ip || null,
-          userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
-          meta: { ...meta, submittedAt: new Date().toISOString() },
-        },
+      const result = await acceptApplication(prisma, {
+        applicationId: req.params.id,
+        adminId: req.auth.sub,
+        ip: req.ip || null,
       });
+      res.json(result);
     } catch (e) {
+      if (e instanceof ApplicationError) {
+        return res.status(e.statusCode).json({ error: e.message });
+      }
       return res.status(500).json({ error: String(e.message || e) });
     }
+  });
 
-    const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
-    const name = [body.firstName, body.lastName].filter(Boolean).join(" ").trim() || "Candidat";
-    const text = [
-      "Nouvelle demande SoluPacker.",
-      "",
-      `Email: ${email}`,
-      `Nom: ${name}`,
-      `Téléphone: ${body.phone || "—"}`,
-      `Nationalité: ${body.nationality || "—"}`,
-      `Expérience livraison: ${body.hasDeliveryExperience ? "Oui" : "Non"}`,
-      "",
-      "Détails complets en base (SecurityEvent type solupacker_application).",
-    ].join("\n");
+  app.patch("/admin/applications/:id/refuse", ...guard, async (req, res) => {
+    const prisma = getPrisma();
+    const reason = typeof req.body?.reason === "string" ? req.body.reason : "";
     try {
-      const transporter = createSmtpTransporter();
-      await transporter.sendMail({
-        from: buildMailFrom(),
-        to,
-        subject: `[SoluPacker] Demande — ${name}`,
-        text,
-        replyTo: email,
+      const result = await refuseApplication(prisma, {
+        applicationId: req.params.id,
+        adminId: req.auth.sub,
+        reason,
+        ip: req.ip || null,
       });
-    } catch (mailErr) {
-      console.warn("[public/solupacker-application] email non envoyé:", mailErr?.message || mailErr);
+      res.json(result);
+    } catch (e) {
+      if (e instanceof ApplicationError) {
+        return res.status(e.statusCode).json({ error: e.message });
+      }
+      return res.status(500).json({ error: String(e.message || e) });
     }
+  });
 
-    res.json({ ok: true });
+  app.get("/admin/applications/:id/document/:type", ...guard, async (req, res) => {
+    const prisma = getPrisma();
+    try {
+      const { buf, mime, docType } = await getApplicationDocument(prisma, {
+        applicationId: req.params.id,
+        docType: req.params.type,
+        adminId: req.auth.sub,
+      });
+      res.setHeader("Content-Type", mime);
+      res.setHeader("Content-Disposition", `inline; filename="${docType}"`);
+      res.setHeader("Cache-Control", "no-store");
+      res.send(buf);
+    } catch (e) {
+      if (e instanceof ApplicationError) {
+        return res.status(e.statusCode).json({ error: e.message });
+      }
+      return res.status(500).json({ error: String(e.message || e) });
+    }
+  });
+}
+
+/** Demande solupacker (formulaire multi-étapes) — SecurityEvent + documents privés + email équipe. */
+function setupPublicSolupackerApplication(app) {
+  app.post("/public/solupacker-application", applicationBodyLimit, async (req, res) => {
+    const prisma = getPrisma();
+    try {
+      const result = await submitApplication(prisma, {
+        applicationType: APPLICATION_TYPES.SOLUPACKER,
+        body: req.body || {},
+        ip: req.ip || null,
+        userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
+      });
+      res.json(result);
+    } catch (e) {
+      if (e instanceof ApplicationError) {
+        return res.status(e.statusCode).json({ error: e.message });
+      }
+      return res.status(500).json({ error: String(e.message || e) });
+    }
   });
 }
 

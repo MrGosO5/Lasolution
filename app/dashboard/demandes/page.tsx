@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { lasolutionFetchJson } from "@/lib/lasolution-api";
 import { DashboardHeader } from "../components/DashboardHeader";
 import { DemandesClient } from "./DemandesClient";
+import type { DemandeRow } from "./types";
 
 type ApiApplication = {
   id: string;
@@ -12,13 +13,12 @@ type ApiApplication = {
   createdAt: string;
 };
 
-type DemandeRow = {
-  nom: string;
-  prenoms: string;
-  email: string;
-  paysResidence: string;
-  dateDemande: string;
-  typeDemande: string;
+const DOC_LABELS: Record<string, string> = {
+  identity: "Pièce d'identité",
+  photo: "Photo",
+  proof: "Justificatif",
+  shopFront: "Façade boutique",
+  storage: "Espace stockage",
 };
 
 function mapApplication(a: ApiApplication): DemandeRow {
@@ -26,13 +26,34 @@ function mapApplication(a: ApiApplication): DemandeRow {
   const firstName = String(meta.firstName ?? "");
   const lastName = String(meta.lastName ?? "");
   const typeDemande = a.type === "solupacker_application" ? "SoluPacker" : "Point relais";
+  const status = String(meta.status ?? "pending");
+  const docsMeta =
+    meta.documents && typeof meta.documents === "object"
+      ? (meta.documents as Record<string, unknown>)
+      : {};
+  const documents = Object.keys(docsMeta).map((type) => ({
+    type,
+    label: DOC_LABELS[type] || type,
+  }));
+
+  let processedAt: string | null = null;
+  const at = meta.acceptedAt || meta.refusedAt;
+  if (typeof at === "string" && at) {
+    processedAt = new Date(at).toLocaleDateString("fr-FR");
+  }
+
   return {
+    id: a.id,
     prenoms: firstName || "—",
     nom: lastName || "—",
     email: a.email || "—",
+    phone: String(meta.phone ?? "—"),
     paysResidence: String(meta.country ?? meta.address ?? meta.city ?? "—"),
     dateDemande: new Date(a.createdAt).toLocaleDateString("fr-FR"),
     typeDemande,
+    status,
+    documents,
+    processedAt,
   };
 }
 
@@ -60,7 +81,7 @@ export default async function DemandesPage({
     <>
       <DashboardHeader
         title="Demandes"
-        subtitle="Validez les demandes de points relais partenaires"
+        subtitle="Validez les demandes SoluPacker et Point Relai"
         session={session}
         rightSlot={
           <form method="GET">
@@ -82,7 +103,7 @@ export default async function DemandesPage({
         <div className="flex flex-col gap-[30px] max-w-[1150px]">
           {total > 0 && (
             <p className="text-sm text-figma-adminSub">
-              {total} demande{total !== 1 ? "s" : ""} en attente
+              {total} demande{total !== 1 ? "s" : ""}
               {q ? ` — résultats pour "${q}"` : ""}
             </p>
           )}

@@ -134,7 +134,8 @@ export default async function CommandesPage({
             </div>
 
             <div className="border border-figma-tableBorder rounded-card overflow-hidden bg-white shadow-card">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px]">
                 <thead>
                   <tr className="bg-figma-tableHeader border-b border-figma-tableBorder">
                     <th className="text-left font-semibold text-sm leading-[140%] text-black py-3 px-3">Référence</th>
@@ -178,6 +179,7 @@ export default async function CommandesPage({
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <CommandesPagination

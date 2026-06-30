@@ -8,6 +8,28 @@ import { PageHeader } from "@/app/site/components/UI";
 
 type StepId = "personal" | "relay" | "docs" | "confirm";
 
+const RELAY_DOC_FIELDS = [
+  { key: "identity" as const, t: "Pièce d'identité du responsable", s: "scan ou image", required: true },
+  { key: "shopFront" as const, t: "Photo de la boutique", s: "scan ou image", required: true },
+  { key: "storage" as const, t: "Photo de l'espace de stockage", s: "scan ou image", required: false },
+  { key: "proof" as const, t: "Justificatif d'adresse (optionnel)", s: "scan ou image", required: false },
+];
+
+type RelayDocuments = Partial<Record<"identity" | "shopFront" | "storage" | "proof", string>>;
+
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+async function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("READ_ERROR"));
+    reader.readAsDataURL(file);
+  });
+}
+
 const STEPS: { id: StepId; label: string }[] = [
   { id: "personal", label: "Informations personnelles" },
   { id: "relay", label: "Informations du point relais" },
@@ -62,6 +84,8 @@ const initialForm: RelayForm = {
 export default function DemandePointRelaiPage() {
   const [step, setStep] = useState<StepId>("personal");
   const [form, setForm] = useState<RelayForm>(initialForm);
+  const [documents, setDocuments] = useState<RelayDocuments>({});
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -70,12 +94,33 @@ export default function DemandePointRelaiPage() {
   const canPrev = currentIdx > 0;
   const canNext = currentIdx < STEPS.length - 1;
 
+  function validateStep(stepId: StepId): boolean {
+    const errors: Record<string, string> = {};
+    if (stepId === "personal") {
+      if (!form.lastName.trim()) errors.lastName = "Nom requis";
+      if (!form.firstName.trim()) errors.firstName = "Prénom requis";
+      if (!form.email.trim() || !isValidEmail(form.email)) errors.email = "Email valide requis";
+      if (!form.phone.trim()) errors.phone = "Téléphone requis";
+    }
+    if (stepId === "relay") {
+      if (!form.relayName.trim()) errors.relayName = "Nom du point relais requis";
+      if (!form.relayAddress.trim()) errors.relayAddress = "Adresse requise";
+    }
+    if (stepId === "docs") {
+      if (!documents.identity) errors.identity = "Pièce d'identité requise";
+      if (!documents.shopFront) errors.shopFront = "Photo de la boutique requise";
+    }
+    setStepErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   function goPrev() {
     if (!canPrev) return;
     setStep(STEPS[currentIdx - 1]!.id);
   }
   function goNext() {
     if (!canNext) return;
+    if (!validateStep(step)) return;
     setStep(STEPS[currentIdx + 1]!.id);
   }
 
@@ -83,14 +128,48 @@ export default function DemandePointRelaiPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  async function handleDocumentUpload(key: keyof RelayDocuments, file: File | undefined) {
+    if (!file) {
+      setDocuments((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setStepErrors((prev) => ({ ...prev, [key]: "Fichier trop volumineux (max 5 Mo)." }));
+      return;
+    }
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type)) {
+      setStepErrors((prev) => ({ ...prev, [key]: "Format accepté : JPG, PNG ou PDF." }));
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setDocuments((prev) => ({ ...prev, [key]: dataUrl }));
+      setStepErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } catch {
+      setStepErrors((prev) => ({ ...prev, [key]: "Lecture du fichier impossible." }));
+    }
+  }
+
   async function submitApplication() {
+    if (!validateStep("personal") || !validateStep("relay") || !validateStep("docs")) {
+      setSubmitError("Veuillez compléter les champs et documents obligatoires.");
+      return;
+    }
     setSubmitStatus("loading");
     setSubmitError(null);
     try {
       const res = await fetch("/api/partner-relay-application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, documents }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -129,8 +208,7 @@ export default function DemandePointRelaiPage() {
             <div className="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-6">
               <p className="text-sm font-semibold text-emerald-900">Demande enregistrée</p>
               <p className="mt-2 text-sm text-emerald-800 leading-relaxed">
-                Nous avons bien reçu votre dossier. L’équipe reviendra vers vous par email. Les pièces jointes pourront être
-                demandées à l’étape suivante du processus.
+                Nous avons bien reçu votre dossier. L'équipe reviendra vers vous par email une fois votre candidature examinée.
               </p>
               <Link
                 href="/devenir-point-relai"
@@ -176,8 +254,14 @@ export default function DemandePointRelaiPage() {
                   <section className="grid gap-4">
                     <h2 className="text-sm font-semibold text-gray-900">Informations personnelles</h2>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <TextInput label="Nom" placeholder="James" value={form.lastName} onChange={(e) => patch("lastName", e.target.value)} />
-                      <TextInput label="Prénom" placeholder="Emile" value={form.firstName} onChange={(e) => patch("firstName", e.target.value)} />
+                      <div>
+                        <TextInput label="Nom" placeholder="James" value={form.lastName} onChange={(e) => patch("lastName", e.target.value)} required />
+                        {stepErrors.lastName ? <p className="text-xs text-red-600 mt-1">{stepErrors.lastName}</p> : null}
+                      </div>
+                      <div>
+                        <TextInput label="Prénom" placeholder="Emile" value={form.firstName} onChange={(e) => patch("firstName", e.target.value)} required />
+                        {stepErrors.firstName ? <p className="text-xs text-red-600 mt-1">{stepErrors.firstName}</p> : null}
+                      </div>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput label="Date de naissance" placeholder="11/06/1995" value={form.dob} onChange={(e) => patch("dob", e.target.value)} />
@@ -186,12 +270,18 @@ export default function DemandePointRelaiPage() {
                         <option>Bénin</option>
                         <option>Togo</option>
                         <option>Sénégal</option>
-                        <option>Côte d’Ivoire</option>
+                        <option>Côte d'Ivoire</option>
                       </Select>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <TextInput label="Numéro de téléphone" placeholder="+33 152629176" value={form.phone} onChange={(e) => patch("phone", e.target.value)} />
-                      <TextInput label="Email" type="email" placeholder="emilejames@gmail.com" value={form.email} onChange={(e) => patch("email", e.target.value)} required />
+                      <div>
+                        <TextInput label="Numéro de téléphone" placeholder="+33 152629176" value={form.phone} onChange={(e) => patch("phone", e.target.value)} required />
+                        {stepErrors.phone ? <p className="text-xs text-red-600 mt-1">{stepErrors.phone}</p> : null}
+                      </div>
+                      <div>
+                        <TextInput label="Email" type="email" placeholder="emilejames@gmail.com" value={form.email} onChange={(e) => patch("email", e.target.value)} required />
+                        {stepErrors.email ? <p className="text-xs text-red-600 mt-1">{stepErrors.email}</p> : null}
+                      </div>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput label="Adresse" placeholder="France, Paris" value={form.address} onChange={(e) => patch("address", e.target.value)} />
@@ -204,8 +294,14 @@ export default function DemandePointRelaiPage() {
                   <section className="grid gap-4">
                     <h2 className="text-sm font-semibold text-gray-900">Informations du point relais</h2>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <TextInput label="Nom du point relai" placeholder="Nom du point relais" value={form.relayName} onChange={(e) => patch("relayName", e.target.value)} />
-                      <TextInput label="Adresse complète" placeholder="Rue, ville, pays" value={form.relayAddress} onChange={(e) => patch("relayAddress", e.target.value)} />
+                      <div>
+                        <TextInput label="Nom du point relai" placeholder="Nom du point relais" value={form.relayName} onChange={(e) => patch("relayName", e.target.value)} required />
+                        {stepErrors.relayName ? <p className="text-xs text-red-600 mt-1">{stepErrors.relayName}</p> : null}
+                      </div>
+                      <div>
+                        <TextInput label="Adresse complète" placeholder="Rue, ville, pays" value={form.relayAddress} onChange={(e) => patch("relayAddress", e.target.value)} required />
+                        {stepErrors.relayAddress ? <p className="text-xs text-red-600 mt-1">{stepErrors.relayAddress}</p> : null}
+                      </div>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput label="Ouverture" placeholder="08:00" value={form.openTime} onChange={(e) => patch("openTime", e.target.value)} />
@@ -219,7 +315,7 @@ export default function DemandePointRelaiPage() {
                     <div className="grid gap-3">
                       <Toggle label="Acceptez-vous de recevoir des colis volumineux ?" value={form.acceptBulky} onChange={(v) => patch("acceptBulky", v)} />
                       <Toggle label="Acceptez-vous de respecter les règles de sécurité et de conditionnement ?" value={form.acceptRules} onChange={(v) => patch("acceptRules", v)} />
-                      <Toggle label="Avez-vous une pièce d’identité valide ?" value={form.hasValidId} onChange={(v) => patch("hasValidId", v)} />
+                      <Toggle label="Avez-vous une pièce d'identité valide ?" value={form.hasValidId} onChange={(v) => patch("hasValidId", v)} />
                     </div>
                   </section>
                 ) : null}
@@ -227,27 +323,44 @@ export default function DemandePointRelaiPage() {
                 {step === "docs" ? (
                   <section className="grid gap-4">
                     <h2 className="text-sm font-semibold text-gray-900">Documents requis</h2>
+                    <p className="text-sm text-gray-600 -mt-2">JPG, PNG ou PDF — 5 Mo maximum par fichier.</p>
                     <div className="grid gap-3">
-                      {[
-                        { t: "Pièce d’identité du responsable", s: "scan ou image" },
-                        { t: "Photo de la boutique", s: "scan ou image" },
-                        { t: "Photo de l’espace de stockage", s: "scan ou image" },
-                        { t: "Justificatif d’adresse (optionnel)", s: "scan ou image" },
-                      ].map((d) => (
+                      {RELAY_DOC_FIELDS.map((d) => (
                         <div
-                          key={d.t}
+                          key={d.key}
                           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl bg-white/80 ring-1 ring-black/5 p-5"
                         >
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">{d.t}</p>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {d.t}
+                              {d.required && <span className="ml-1 text-[var(--logo-red)]">*</span>}
+                            </p>
                             <p className="mt-1 text-xs text-gray-500">({d.s})</p>
+                            {documents[d.key]?.startsWith("data:image") ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={documents[d.key]}
+                                alt={`Aperçu ${d.t}`}
+                                className="mt-2 h-24 w-auto max-w-[200px] rounded-lg object-cover ring-1 ring-black/10"
+                              />
+                            ) : documents[d.key] ? (
+                              <p className="mt-2 text-xs font-semibold text-emerald-700">Fichier chargé (PDF)</p>
+                            ) : null}
+                            {stepErrors[d.key] ? (
+                              <p className="mt-1 text-xs text-red-600">{stepErrors[d.key]}</p>
+                            ) : documents[d.key] ? (
+                              <p className="mt-1 text-xs text-emerald-700">Document OK</p>
+                            ) : null}
                           </div>
-                          <button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/15 transition-smooth hover:bg-black"
-                          >
+                          <label className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/15 transition-smooth hover:bg-black cursor-pointer">
                             Téléverser
-                          </button>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,application/pdf"
+                              className="sr-only"
+                              onChange={(e) => void handleDocumentUpload(d.key, e.target.files?.[0])}
+                            />
+                          </label>
                         </div>
                       ))}
                     </div>
@@ -257,10 +370,6 @@ export default function DemandePointRelaiPage() {
                       value={form.motivation}
                       onChange={(e) => patch("motivation", e.target.value)}
                     />
-                    <p className="text-xs text-gray-500">
-                      L’upload de fichiers sera branché dans une prochaine itération ; la motivation et les infos précédentes sont
-                      enregistrées avec la demande.
-                    </p>
                   </section>
                 ) : null}
 
@@ -269,17 +378,9 @@ export default function DemandePointRelaiPage() {
                     <h2 className="text-sm font-semibold text-gray-900">Confirmation de demande</h2>
                     <div className="rounded-2xl bg-white/80 ring-1 ring-black/5 p-6">
                       <p className="text-sm text-gray-700 leading-relaxed">
-                        Contrat de collaboration: téléversez le contrat signé dans une prochaine version ; pour l’instant,
-                        confirmez l’envoi de votre dossier avec les informations saisies.
+                        Vérifiez vos informations et documents, puis confirmez l'envoi de votre dossier.
                       </p>
                       <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/15 transition-smooth hover:bg-black opacity-60 cursor-not-allowed"
-                          disabled
-                        >
-                          Téléverser le contrat (PDF) — bientôt
-                        </button>
                         <button
                           type="button"
                           disabled={submitStatus === "loading"}
@@ -331,7 +432,7 @@ export default function DemandePointRelaiPage() {
                 </button>
               </div>
               <p className="mt-3 text-xs text-gray-500">
-                Soumission : SecurityEvent + email équipe (si SMTP). Base requise.
+                Les documents sont stockés de façon sécurisée et accessibles uniquement par l'équipe admin.
               </p>
             </>
           )}

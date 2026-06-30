@@ -33,6 +33,14 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Documents privés de candidatures (pièces d'identité, etc.) — ne jamais committer
+private-uploads/
+**/private-uploads/
+
+# Uploads locaux (preuves, photos)
+uploads/
+**/uploads/
+
 .env.local
 .env.development.local
 .env.test.local

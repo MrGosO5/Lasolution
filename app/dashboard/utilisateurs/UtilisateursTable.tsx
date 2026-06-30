@@ -60,7 +60,8 @@ export function UtilisateursTable({ users }: { users: UserRow[] }) {
   return (
     <>
       <div className="border border-figma-tableBorder rounded-card overflow-hidden bg-white shadow-card">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px]">
           <thead>
             <tr className="bg-figma-tableHeader border-b border-figma-tableBorder">
               <th className="text-left font-semibold text-sm text-figma-headerTitle py-3.5 px-4">
@@ -177,6 +178,7 @@ export function UtilisateursTable({ users }: { users: UserRow[] }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {modal === "historique" && selectedUser && (

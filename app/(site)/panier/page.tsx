@@ -44,10 +44,8 @@ export default function PanierPage() {
                     Ajoutez un produit depuis une boutique pour créer votre première commande.
                   </p>
                   <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                    <Link className="btn btn-primary" href="/boutiques">
-                      Aller aux boutiques
-                    </Link>
-                    <Link className="btn btn-ghost" href="/connexion">
+                    {/* Boutiques bientôt disponible — CTA masqué pour le moment */}
+                    <Link className="btn btn-primary" href="/connexion">
                       Se connecter
                     </Link>
                   </div>

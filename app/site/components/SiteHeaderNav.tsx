@@ -8,8 +8,10 @@ type NavItem = { href: string; label: string; match?: "exact" | "prefix" };
 
 const PUBLIC_NAV: NavItem[] = [
   { href: "/services", label: "Services", match: "prefix" },
-  { href: "/boutiques", label: "Boutiques", match: "prefix" },
+  // Boutiques bientôt disponible — masqué pour le moment
   { href: "/faq", label: "FAQ", match: "exact" },
+  { href: "/devenir-point-relai", label: "Devenir Point Relai", match: "prefix" },
+  { href: "/devenir-solupacker", label: "Devenir SoluPacker", match: "prefix" },
 ];
 
 function isNavActive(pathname: string, href: string, match: NavItem["match"] = "prefix"): boolean {
@@ -18,13 +20,13 @@ function isNavActive(pathname: string, href: string, match: NavItem["match"] = "
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function navLinkClass(active: boolean, variant: "inline" | "button") {
-  if (variant === "button") {
-    return active ? "btn btn-ghost" : "btn btn-ghost";
-  }
-  return active
-    ? "font-semibold text-[var(--logo-red-dark)] underline decoration-[var(--logo-red)] decoration-2 underline-offset-4"
-    : "text-gray-700 hover:text-gray-900";
+function navLinkClass(active: boolean) {
+  return [
+    "relative whitespace-nowrap text-sm font-medium transition-colors after:absolute after:-bottom-1.5 after:left-0 after:h-0.5 after:rounded-full after:bg-[var(--logo-red)] after:transition-all",
+    active
+      ? "text-gray-900 after:w-full"
+      : "text-gray-600 hover:text-gray-900 after:w-0 hover:after:w-full",
+  ].join(" ");
 }
 
 function mobileLinkClass(active: boolean) {
@@ -59,38 +61,43 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
   ];
 
   return (
-    <>
-      <nav className="hidden items-center gap-6 text-sm md:flex" aria-label="Navigation principale">
+    <div className="flex flex-1 items-center justify-between gap-4">
+      <nav className="hidden items-center gap-7 lg:flex" aria-label="Navigation principale">
         {PUBLIC_NAV.map((item) => {
           const active = isNavActive(pathname, item.href, item.match);
           return (
-            <Link key={item.href} href={item.href} className={navLinkClass(active, "inline")} aria-current={active ? "page" : undefined}>
+            <Link key={item.href} href={item.href} className={navLinkClass(active)} aria-current={active ? "page" : undefined}>
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="ml-auto flex items-center gap-2 lg:gap-5">
         {isAuthed ? (
           <>
-            {clientNav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`hidden md:inline-flex ${navLinkClass(isNavActive(pathname, item.href, item.match), "button")}`}
-                aria-current={isNavActive(pathname, item.href, item.match) ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
-            <SiteSignOutButton className="btn btn-primary" />
+            <nav className="hidden items-center gap-5 lg:flex" aria-label="Mon compte">
+              {clientNav.map((item) => {
+                const active = isNavActive(pathname, item.href, item.match);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={navLinkClass(active)}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            <SiteSignOutButton className="btn btn-primary hidden lg:inline-flex" />
           </>
         ) : (
           <>
             <Link
               href="/connexion"
-              className={`hidden md:inline-flex ${navLinkClass(pathname === "/connexion" || pathname.startsWith("/login"), "button")}`}
+              className={`hidden lg:inline-flex ${navLinkClass(pathname === "/connexion" || pathname.startsWith("/login"))}`}
             >
               Se connecter
             </Link>
@@ -100,11 +107,14 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
           </>
         )}
 
-        <details className="relative md:hidden">
-          <summary className="list-none cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-black/5 focus-ring">
-            Menu
+        <details className="relative lg:hidden">
+          <summary className="flex h-10 w-10 list-none cursor-pointer items-center justify-center rounded-xl text-gray-900 hover:bg-black/5 focus-ring [&::-webkit-details-marker]:hidden">
+            <span className="sr-only">Ouvrir le menu</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </summary>
-          <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl bg-white/90 backdrop-blur-md ring-1 ring-black/10 shadow-xl">
+          <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl bg-white/95 backdrop-blur-md ring-1 ring-black/10 shadow-xl">
             <nav className="grid p-2 text-sm" aria-label="Menu mobile">
               {mobileItems.map((item) => {
                 const active = isNavActive(pathname, item.href, item.match);
@@ -131,6 +141,6 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
           </div>
         </details>
       </div>
-    </>
+    </div>
   );
 }

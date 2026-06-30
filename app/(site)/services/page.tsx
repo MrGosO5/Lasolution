@@ -36,15 +36,10 @@ export default function ServicesPage() {
             formulaire d’expédition.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/boutiques"
-              className="btn btn-primary"
-            >
-              Aller aux boutiques
-            </Link>
+            {/* Boutiques bientôt disponible — CTA masqué pour le moment */}
             <Link
               href="/expedier-un-colis"
-              className="btn btn-ghost"
+              className="btn btn-primary"
             >
               Expédier un colis
             </Link>

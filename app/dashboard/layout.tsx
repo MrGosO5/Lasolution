@@ -14,10 +14,10 @@ export default async function DashboardLayout({
   const pendingTestimonials = stats?.pendingTestimonials ?? 0;
 
   return (
-    <main className="relative w-full max-w-[1440px] min-h-[1024px] min-h-screen mx-auto font-sans bg-figma-page">
-      <div className="flex h-screen max-h-screen min-h-[1024px]">
+    <main className="relative w-full max-w-[1440px] min-h-screen mx-auto font-sans bg-figma-page">
+      <div className="flex flex-col md:flex-row md:h-screen md:max-h-screen">
         <DashboardSidebar pendingTestimonials={pendingTestimonials} />
-        <div className="flex-1 flex flex-col overflow-hidden bg-figma-page">
+        <div className="flex-1 flex flex-col md:overflow-hidden bg-figma-page min-w-0">
           {children}
         </div>
       </div>

@@ -122,7 +122,8 @@ export function AvisClient({
         </div>
 
         <div className="border border-figma-tableBorder rounded-lg overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr className="bg-figma-tableHeader border-b border-figma-tableBorder">
                 <Th>Client</Th>
@@ -191,6 +192,7 @@ export function AvisClient({
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {totalPages > 1 ? (

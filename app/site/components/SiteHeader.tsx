@@ -14,8 +14,8 @@ export async function SiteHeader() {
   const accountLabel = role === "admin" ? "Tableau de bord" : "Mon espace";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/5 bg-white/60 backdrop-blur-md">
-      <div className="site-container flex items-center justify-between py-4">
+    <header className="sticky top-0 z-40 border-b border-black/5 bg-white/70 backdrop-blur-md">
+      <div className="site-container flex items-center gap-4 py-3 md:gap-8">
         <Link href="/" className="focus-ring inline-flex shrink-0 items-center rounded-xl py-0.5">
           <span className="sr-only">La Solution</span>
           <Logo />

@@ -1,83 +1,60 @@
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
-export async function SiteFooter() {
-  const session = await getServerSession(authOptions);
-  const role = session?.user?.role;
-  const isAuthed = Boolean(session?.user?.id);
-  const isClient = role === "client";
-  const isAdmin = role === "admin";
-  const accountHref = isAdmin ? "/dashboard" : isAuthed ? "/mon-espace" : "/connexion";
-  const accountLabel = isAdmin ? "Tableau de bord" : isAuthed ? "Mon espace" : "Se connecter";
+type FooterLink = { href: string; label: string };
 
+const NAVIGATION: FooterLink[] = [
+  { href: "/", label: "Accueil" },
+  { href: "/services", label: "Services" },
+  { href: "/faq", label: "FAQ" },
+];
+
+const LEGAL: FooterLink[] = [
+  { href: "/politique-de-confidentialite", label: "Politique de confidentialité" },
+  { href: "/conditions-generales", label: "CGU / CGV" },
+  { href: "/mentions-legales", label: "Mentions légales" },
+];
+
+const AIDE: FooterLink[] = [{ href: "/support", label: "Support client" }];
+
+function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) {
+  return (
+    <nav aria-label={title} className="flex flex-col gap-2 text-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-900">{title}</p>
+      <ul className="flex flex-col gap-1.5">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link
+              href={l.href}
+              className="text-gray-600 transition-colors hover:text-gray-900"
+            >
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-black/5 bg-white/60 backdrop-blur-sm">
-      <div className="site-container py-12">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
-          <div className="flex flex-col gap-4">
-            <Logo />
-            <p className="text-sm text-gray-600 leading-relaxed max-w-sm">
-              Votre passerelle logistique vous offre l’opportunité de faire des achats et
-              expéditions sans gêne.
-            </p>
-            <p className="text-xs text-gray-500">© 2025 La Solution – Tous droits réservés.</p>
-          </div>
+      <div className="site-container py-10">
+        <Link href="/" className="inline-flex focus-ring rounded-lg">
+          <Logo />
+        </Link>
 
-          <nav aria-label="Plan du site" className="grid gap-2 text-sm">
-            <p className="text-xs font-semibold tracking-wide text-gray-900 uppercase">Navigation</p>
-            <Link className="text-gray-700 hover:text-gray-900" href="/">
-              Accueil
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/services">
-              Services
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/boutiques">
-              Boutiques
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/faq">
-              FAQ
-            </Link>
-          </nav>
-
-          <nav aria-label="Liens utiles" className="grid gap-2 text-sm">
-            <p className="text-xs font-semibold tracking-wide text-gray-900 uppercase">Liens</p>
-            <Link className="text-gray-700 hover:text-gray-900" href={accountHref}>
-              {accountLabel}
-            </Link>
-            {isAuthed && isClient ? (
-              <Link className="text-gray-700 hover:text-gray-900" href="/mes-commandes">
-                Mes commandes
-              </Link>
-            ) : null}
-            <Link className="text-gray-700 hover:text-gray-900" href="/politique-de-confidentialite">
-              Politique de confidentialité
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/conditions-generales">
-              CGU / CGV
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/mentions-legales">
-              Mentions légales
-            </Link>
-            {isAuthed && isClient ? (
-              <Link className="text-gray-700 hover:text-gray-900" href="/carte">
-                Carte de paiement
-              </Link>
-            ) : null}
-            <Link className="text-gray-700 hover:text-gray-900" href="/support">
-              Support client
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/devenir-point-relai">
-              Devenir Partenaire Point Relai
-            </Link>
-            <Link className="text-gray-700 hover:text-gray-900" href="/devenir-solupacker">
-              Devenir SoluPacker
-            </Link>
-          </nav>
+        <div className="mt-8 grid grid-cols-2 items-start gap-x-6 gap-y-8 sm:grid-cols-3 lg:gap-x-8">
+          <FooterColumn title="Navigation" links={NAVIGATION} />
+          <FooterColumn title="Légal" links={LEGAL} />
+          <FooterColumn title="Aide" links={AIDE} />
         </div>
+
+        <p className="mt-8 border-t border-black/5 pt-6 text-center text-xs text-gray-500 sm:text-left">
+          © 2025 La Solution — Tous droits réservés.
+        </p>
       </div>
     </footer>
   );
 }
-

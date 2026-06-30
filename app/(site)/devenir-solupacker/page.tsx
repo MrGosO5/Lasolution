@@ -8,6 +8,27 @@ import { PageHeader } from "@/app/site/components/UI";
 
 type StepId = "personal" | "documents" | "experience" | "confirm";
 
+const DOC_FIELDS = [
+  { key: "identity" as const, t: "Passeport ou pièce d'identité", s: "Document d'identité en cours de validité", required: true },
+  { key: "photo" as const, t: "Photo récente", s: "Portrait de moins de 6 mois, fond uni", required: true },
+  { key: "proof" as const, t: "Justificatif de domicile", s: "Moins de 3 mois (facture eau/électricité/gaz, etc.)", required: false },
+];
+
+type ApplicationDocuments = Partial<Record<"identity" | "photo" | "proof", string>>;
+
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+async function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("READ_ERROR"));
+    reader.readAsDataURL(file);
+  });
+}
+
 const STEPS: { id: StepId; label: string }[] = [
   { id: "personal",   label: "Informations personnelles" },
   { id: "documents",  label: "Documents requis" },
@@ -50,6 +71,8 @@ const initialForm: SolupackerForm = {
 export default function DevenirSolupackerPage() {
   const [step, setStep] = useState<StepId>("personal");
   const [form, setForm] = useState<SolupackerForm>(initialForm);
+  const [documents, setDocuments] = useState<ApplicationDocuments>({});
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -57,20 +80,74 @@ export default function DevenirSolupackerPage() {
   const canPrev = currentIdx > 0;
   const canNext = currentIdx < STEPS.length - 1;
 
+  function validateStep(stepId: StepId): boolean {
+    const errors: Record<string, string> = {};
+    if (stepId === "personal") {
+      if (!form.lastName.trim()) errors.lastName = "Nom requis";
+      if (!form.firstName.trim()) errors.firstName = "Prénom requis";
+      if (!form.email.trim() || !isValidEmail(form.email)) errors.email = "Email valide requis";
+      if (!form.phone.trim()) errors.phone = "Téléphone requis";
+    }
+    if (stepId === "documents") {
+      if (!documents.identity) errors.identity = "Pièce d'identité requise";
+      if (!documents.photo) errors.photo = "Photo requise";
+    }
+    setStepErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   function goPrev() { if (canPrev) setStep(STEPS[currentIdx - 1]!.id); }
-  function goNext() { if (canNext) setStep(STEPS[currentIdx + 1]!.id); }
+  function goNext() {
+    if (!canNext) return;
+    if (!validateStep(step)) return;
+    setStep(STEPS[currentIdx + 1]!.id);
+  }
   function patch<K extends keyof SolupackerForm>(key: K, value: SolupackerForm[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  async function handleDocumentUpload(key: keyof ApplicationDocuments, file: File | undefined) {
+    if (!file) {
+      setDocuments((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setStepErrors((prev) => ({ ...prev, [key]: "Fichier trop volumineux (max 5 Mo)." }));
+      return;
+    }
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type)) {
+      setStepErrors((prev) => ({ ...prev, [key]: "Format accepté : JPG, PNG ou PDF." }));
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setDocuments((prev) => ({ ...prev, [key]: dataUrl }));
+      setStepErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } catch {
+      setStepErrors((prev) => ({ ...prev, [key]: "Lecture du fichier impossible." }));
+    }
+  }
+
   async function submitApplication() {
+    if (!validateStep("personal") || !validateStep("documents")) {
+      setSubmitError("Veuillez compléter les champs et documents obligatoires.");
+      return;
+    }
     setSubmitStatus("loading");
     setSubmitError(null);
     try {
       const res = await fetch("/api/solupacker-application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, documents }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -174,6 +251,7 @@ export default function DevenirSolupackerPage() {
                         onChange={(e) => patch("lastName", e.target.value)}
                         required
                       />
+                      {stepErrors.lastName ? <p className="text-xs text-red-600 -mt-3">{stepErrors.lastName}</p> : null}
                       <TextInput
                         label="Prénom"
                         placeholder="Marie"
@@ -181,6 +259,7 @@ export default function DevenirSolupackerPage() {
                         onChange={(e) => patch("firstName", e.target.value)}
                         required
                       />
+                      {stepErrors.firstName ? <p className="text-xs text-red-600 -mt-3">{stepErrors.firstName}</p> : null}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
@@ -213,7 +292,9 @@ export default function DevenirSolupackerPage() {
                         placeholder="+33 6 12 34 56 78"
                         value={form.phone}
                         onChange={(e) => patch("phone", e.target.value)}
+                        required
                       />
+                      {stepErrors.phone ? <p className="text-xs text-red-600 -mt-3">{stepErrors.phone}</p> : null}
                       <TextInput
                         label="Email"
                         type="email"
@@ -222,6 +303,7 @@ export default function DevenirSolupackerPage() {
                         onChange={(e) => patch("email", e.target.value)}
                         required
                       />
+                      {stepErrors.email ? <p className="text-xs text-red-600 -mt-3">{stepErrors.email}</p> : null}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput
@@ -245,55 +327,53 @@ export default function DevenirSolupackerPage() {
                     <div>
                       <h2 className="text-base font-semibold text-gray-900">Documents requis</h2>
                       <p className="mt-1 text-sm text-gray-600">
-                        Préparez ces documents — l'upload sera finalisé après validation de votre dossier.
+                        JPG, PNG ou PDF — 5 Mo maximum par fichier.
                       </p>
                     </div>
                     <div className="grid gap-3">
-                      {[
-                        {
-                          t: "Passeport ou pièce d'identité",
-                          s: "Document d'identité en cours de validité",
-                          required: true,
-                        },
-                        {
-                          t: "Photo récente",
-                          s: "Portrait de moins de 6 mois, fond uni",
-                          required: true,
-                        },
-                        {
-                          t: "Justificatif de domicile",
-                          s: "Moins de 3 mois (facture eau/électricité/gaz, etc.)",
-                          required: false,
-                        },
-                      ].map((d) => (
+                      {DOC_FIELDS.map((d) => (
                         <div
-                          key={d.t}
+                          key={d.key}
                           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl bg-white/80 ring-1 ring-black/5 p-5"
                         >
-                          <div>
+                          <div className="flex-1">
                             <p className="text-sm font-semibold text-gray-900">
                               {d.t}
                               {d.required && <span className="ml-1 text-[var(--logo-red)]">*</span>}
                             </p>
                             <p className="mt-0.5 text-xs text-gray-500">{d.s}</p>
+                            {documents[d.key]?.startsWith("data:image") ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={documents[d.key]}
+                                alt={`Aperçu ${d.t}`}
+                                className="mt-2 h-24 w-auto max-w-[200px] rounded-lg object-cover ring-1 ring-black/10"
+                              />
+                            ) : documents[d.key] ? (
+                              <p className="mt-2 text-xs font-semibold text-emerald-700">Fichier chargé (PDF)</p>
+                            ) : null}
+                            {stepErrors[d.key] ? (
+                              <p className="mt-1 text-xs text-red-600">{stepErrors[d.key]}</p>
+                            ) : documents[d.key] ? (
+                              <p className="mt-1 text-xs text-emerald-700">Document OK</p>
+                            ) : null}
                           </div>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/15 transition-smooth hover:bg-black opacity-60 cursor-not-allowed"
-                            disabled
-                            title="Disponible après confirmation de votre dossier"
-                          >
+                          <label className="inline-flex items-center gap-2 justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/15 transition-smooth hover:bg-black cursor-pointer">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                             Téléverser
-                          </button>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,application/pdf"
+                              className="sr-only"
+                              onChange={(e) => void handleDocumentUpload(d.key, e.target.files?.[0])}
+                            />
+                          </label>
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500">
-                      * Obligatoire. L'upload de fichiers sera activé après validation initiale de votre demande.
-                    </p>
+                    <p className="text-xs text-gray-500">* Obligatoire avant soumission.</p>
                   </section>
                 )}
 

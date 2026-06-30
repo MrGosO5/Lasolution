@@ -1,7 +1,7 @@
-/** Wordmark fond clair — header / navigation (sans baseline) */
-export const BRAND_LOGO_SRC = "/icon/LOGO-SOLUTION-light-nav.png";
-export const BRAND_LOGO_WIDTH = 1565;
-export const BRAND_LOGO_HEIGHT = 306;
+/** Wordmark fond clair — header / navigation (logo complet avec baseline, rogné) */
+export const BRAND_LOGO_SRC = "/icon/LOGO-SOLUTION-trim.png";
+export const BRAND_LOGO_WIDTH = 1550;
+export const BRAND_LOGO_HEIGHT = 364;
 export const BRAND_LOGO_ASPECT = BRAND_LOGO_WIDTH / BRAND_LOGO_HEIGHT;
 
 /** Icône seule (favicon, apps) */

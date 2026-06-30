@@ -17,9 +17,7 @@ export function LandingCtaGroup({ role, isAuthed }: Props) {
   if (!isAuthed || !role) {
     return (
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-1">
-        <TrackedLink href="/boutiques" className="btn btn-primary" event="landing_cta_boutiques">
-          Découvrir les boutiques
-        </TrackedLink>
+        {/* Boutiques bientôt disponible — masqué pour le moment */}
         <TrackedLink href="/expedier-un-colis" className="btn btn-primary" event="landing_cta_expedition">
           Expédier un colis
         </TrackedLink>
@@ -52,9 +50,7 @@ export function LandingCtaGroup({ role, isAuthed }: Props) {
         <TrackedLink href="/mes-commandes" className="btn btn-primary" event="landing_cta_espace">
           Mes commandes
         </TrackedLink>
-        <TrackedLink href="/boutiques" className="btn btn-primary" event="landing_cta_boutiques">
-          Boutiques
-        </TrackedLink>
+        {/* Boutiques bientôt disponible — masqué pour le moment */}
         <TrackedLink href="/mon-espace" className="btn btn-ghost" event="landing_cta_espace">
           Mon espace
         </TrackedLink>

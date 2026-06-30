@@ -1,17 +1,16 @@
 import Image from "next/image";
-import { BRAND_LOGO_SRC } from "@/lib/brand-logo";
+import { BRAND_LOGO_SRC, BRAND_LOGO_WIDTH, BRAND_LOGO_HEIGHT } from "@/lib/brand-logo";
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <div className={`relative aspect-[1565/306] h-11 w-auto shrink-0 sm:h-12 ${className ?? ""}`}>
-      <Image
-        src={BRAND_LOGO_SRC}
-        alt="La Solution"
-        fill
-        className="object-contain object-left"
-        sizes="(max-width: 640px) 220px, 260px"
-        priority
-      />
-    </div>
+    <Image
+      src={BRAND_LOGO_SRC}
+      alt="La Solution"
+      width={BRAND_LOGO_WIDTH}
+      height={BRAND_LOGO_HEIGHT}
+      priority
+      sizes="(max-width: 640px) 225px, 250px"
+      className={`h-11 w-auto shrink-0 select-none object-contain sm:h-12 ${className ?? ""}`}
+    />
   );
 }

@@ -71,7 +71,8 @@ export default async function SolupackersPage({
           </div>
 
           <div className="border border-figma-tableBorder rounded-card overflow-hidden bg-white shadow-card">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="bg-figma-tableHeader border-b border-figma-tableBorder">
                   {["Nom", "Prénoms", "Email", "Pays", "Date d'inscription", "Missions"].map((h) => (
@@ -104,6 +105,7 @@ export default async function SolupackersPage({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>

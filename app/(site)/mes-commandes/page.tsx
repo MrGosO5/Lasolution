@@ -66,10 +66,8 @@ export default async function MesCommandesPage() {
                 Ajoutez un produit au panier, puis finalisez le checkout pour créer votre première commande.
               </p>
               <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <Link href="/boutiques" className="btn btn-primary">
-                  Aller aux boutiques
-                </Link>
-                <Link href="/panier" className="btn btn-ghost">
+                {/* Boutiques bientôt disponible — CTA masqué pour le moment */}
+                <Link href="/panier" className="btn btn-primary">
                   Voir le panier
                 </Link>
               </div>

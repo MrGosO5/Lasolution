@@ -13,21 +13,25 @@ export function DashboardHeader({
   subtitle?: string;
 }) {
   return (
-    <header className="flex flex-row justify-between items-center px-6 py-3 bg-white min-h-[56px] flex-shrink-0 border-b border-figma-tableBorder shadow-header">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-bold text-xl leading-tight text-figma-headerTitle truncate">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-sm text-figma-adminSub truncate" role="doc-subtitle">
-              {subtitle}
-            </p>
-          )}
-        </div>
-        {rightSlot}
+    <header className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6 bg-white min-h-[56px] flex-shrink-0 border-b border-figma-tableBorder shadow-header">
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1 sm:order-1">
+        <h1 className="font-bold text-lg sm:text-xl leading-tight text-figma-headerTitle truncate">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="text-xs sm:text-sm text-figma-adminSub truncate" role="doc-subtitle">
+            {subtitle}
+          </p>
+        )}
       </div>
-      <div className="flex items-center gap-4 flex-shrink-0">
+
+      {rightSlot ? (
+        <div className="order-last w-full sm:order-2 sm:w-auto sm:flex-1 sm:max-w-xl">
+          {rightSlot}
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 sm:order-3">
         <button
           type="button"
           className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-figma-tableHeader hover:bg-figma-tableRowBorder transition-smooth duration-fast focus-ring"
@@ -37,10 +41,10 @@ export function DashboardHeader({
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D6364E] ring-2 ring-white" />
         </button>
         <div className="flex items-center gap-3 pl-2 border-l border-figma-tableBorder">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-figma-activeMenuText to-figma-activeMenuText/80 flex items-center justify-center text-sm font-bold text-white ring-2 ring-figma-tableRowBorder">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-figma-activeMenuText to-figma-activeMenuText/80 flex items-center justify-center text-sm font-bold text-white ring-2 ring-figma-tableRowBorder shrink-0">
             {session?.user?.name?.[0] ?? session?.user?.email?.[0] ?? "A"}
           </div>
-          <div className="flex flex-col hidden sm:block">
+          <div className="hidden sm:flex sm:flex-col">
             <span className="font-semibold text-sm leading-tight text-figma-headerTitle">
               {session?.user?.name ?? "Admin"}
             </span>

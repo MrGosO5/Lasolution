@@ -71,7 +71,8 @@ export default async function PointsRelaisPage({
           </div>
 
           <div className="border border-figma-tableBorder rounded-card overflow-hidden bg-white shadow-card">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="bg-figma-tableHeader border-b border-figma-tableBorder">
                   {["Nom", "Prénoms", "Email", "Ville", "Pays", "Date d'inscription"].map((h) => (
@@ -106,6 +107,7 @@ export default async function PointsRelaisPage({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>

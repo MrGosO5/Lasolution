@@ -15,12 +15,12 @@ export const revalidate = 0;
 
 const SITE_URL = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "http://localhost:3001";
 
-const title = "La Solution — Achat assisté et expédition Europe → Afrique";
+const title = "Achat assisté et expédition";
 const description =
   "Faites vos achats ou envoyez un colis depuis l’Europe vers l’Afrique. Achat assisté, paiement sécurisé, suivi en temps réel et support client intégré.";
 
 export const metadata: Metadata = {
-  title,
+  title: { absolute: title },
   description,
   alternates: { canonical: "/" },
   openGraph: {

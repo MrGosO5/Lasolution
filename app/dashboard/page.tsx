@@ -140,7 +140,8 @@ function RecentOrdersTable({ byStatus, totalOrders }: { byStatus: Record<string,
 
   return (
     <div className="border border-figma-tableBorder rounded-card overflow-hidden bg-white shadow-card">
-      <table className="w-full">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[420px]">
         <thead>
           <tr className="bg-figma-tableHeader border-b border-figma-tableBorder">
             <th className="text-left font-semibold text-sm text-figma-headerTitle py-3.5 px-4">Statut</th>
@@ -166,6 +167,7 @@ function RecentOrdersTable({ byStatus, totalOrders }: { byStatus: Record<string,
           })}
         </tbody>
       </table>
+      </div>
       <div className="px-4 py-2.5 bg-figma-tableHeader border-t border-figma-tableBorder text-right">
         <Link href="/dashboard/commandes" className="text-sm font-medium text-figma-activeMenuText hover:underline">
           Gérer toutes les commandes →
