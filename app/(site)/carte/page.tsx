@@ -1,9 +1,15 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
 import { Select, TextInput } from "@/app/site/components/Form";
+import { PhoneInput } from "@/app/site/components/PhoneInput";
 
 export default function CartePage() {
+  const [rechargePhone, setRechargePhone] = useState("");
+  const [withdrawPhone, setWithdrawPhone] = useState("");
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-14 md:py-16">
       <Reveal>
@@ -61,7 +67,7 @@ export default function CartePage() {
                 <option>Mobile Money</option>
                 <option>Carte bancaire</option>
               </Select>
-              <TextInput label="Numéro de téléphone" placeholder="+33 152629176" />
+              <PhoneInput label="Numéro de téléphone" value={rechargePhone} onChange={setRechargePhone} country="Bénin" />
               <div className="grid gap-4 md:grid-cols-2">
                 <Select label="Devise" defaultValue="FCFA">
                   <option>FCFA</option>
@@ -87,7 +93,7 @@ export default function CartePage() {
               Transférez votre solde vers votre compte Mobile Money. Traitement instantané sous réserve de validation.
             </p>
             <div className="mt-4 grid gap-4">
-              <TextInput label="Numéro de téléphone" placeholder="+33 152629176" />
+              <PhoneInput label="Numéro de téléphone" value={withdrawPhone} onChange={setWithdrawPhone} country="Bénin" />
               <div className="grid gap-4 md:grid-cols-2">
                 <TextInput label="Montant" placeholder="20000" inputMode="numeric" />
                 <Select label="Devise" defaultValue="FCFA">

@@ -6,7 +6,7 @@ import { signIn, getSession, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
-import { TextInput } from "@/app/site/components/Form";
+import { PasswordInput, TextInput } from "@/app/site/components/Form";
 import { PageHeader } from "@/app/site/components/UI";
 import {
   applyRoleToDefaultHub,
@@ -120,9 +120,8 @@ export default function ConnexionSitePage() {
                 autoComplete="email"
                 required
               />
-              <TextInput
+              <PasswordInput
                 label="Mot de passe"
-                type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

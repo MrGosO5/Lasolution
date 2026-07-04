@@ -68,6 +68,7 @@ summary::-webkit-details-marker { display: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
 }
 .btn:active { transform: scale(0.99); }
@@ -109,6 +110,30 @@ summary::-webkit-details-marker { display: none; }
 .card:hover {
   box-shadow: 0 10px 22px rgba(17,24,39,0.06);
   transform: translateY(-2px);
+}
+
+/* Curseur « main » sur boutons, liens et cartes cliquables */
+button:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+input[type="file"],
+select,
+summary,
+a[href],
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+.btn:disabled,
+[disabled] {
+  cursor: not-allowed;
+}
+
+a.card,
+a:has(.card) {
+  cursor: pointer;
 }
 
 @keyframes fade-in {

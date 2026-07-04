@@ -39,11 +39,29 @@ export function ClientEspaceHub({ session }: { session: Session }) {
         ))}
         <Reveal delayMs={80 + tabs.length * 70} className="h-full">
           <Link href="/boutiques" className="card h-full p-6 focus-ring">
-            <p className="text-sm font-semibold text-gray-900">Reprendre mes achats</p>
+            <p className="text-sm font-semibold text-gray-900">Boutiques</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              Parcourez les boutiques et ajoutez des produits au panier.
+              Amazon, AliExpress, TEMU, SHEIN… Parcourez les catalogues et ajoutez au panier.
             </p>
             <p className="mt-4 text-sm font-semibold text-gray-900">Voir les boutiques →</p>
+          </Link>
+        </Reveal>
+        <Reveal delayMs={80 + (tabs.length + 1) * 70} className="h-full">
+          <Link href="/panier" className="card h-full p-6 focus-ring">
+            <p className="text-sm font-semibold text-gray-900">Panier</p>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              Consultez vos articles, ajustez les quantités et passez au paiement.
+            </p>
+            <p className="mt-4 text-sm font-semibold text-gray-900">Voir le panier →</p>
+          </Link>
+        </Reveal>
+        <Reveal delayMs={80 + (tabs.length + 2) * 70} className="h-full">
+          <Link href="/expedier-un-colis" className="card h-full p-6 focus-ring">
+            <p className="text-sm font-semibold text-gray-900">Expédier un colis</p>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              Créez une demande d&apos;expédition et suivez votre envoi de colis.
+            </p>
+            <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
           </Link>
         </Reveal>
       </div>

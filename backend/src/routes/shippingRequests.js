@@ -1,4 +1,6 @@
 const { createSmtpTransporter, buildMailFrom } = require("../emails/mailer");
+const { sendShippingRequestEmailJs } = require("../emails/emailjsShipping");
+const { buildShippingRequestPlainText } = require("../emails/shippingRequestEmail");
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -81,7 +83,8 @@ function setupShippingRequestRoutes(app, getPrisma) {
     }
 
     const to = process.env.CUSTOMERCARE_EMAIL || "customercare@lasolution.org";
-    const transporter = createSmtpTransporter();
+    const photoMimeMatch = /^data:([^;]+);base64,/.exec(String(photoDataUrl || ""));
+    const photoMime = photoMimeMatch ? photoMimeMatch[1] : "image/jpeg";
 
     const prisma = typeof getPrisma === "function" ? getPrisma() : null;
     if (prisma) {
@@ -114,42 +117,58 @@ function setupShippingRequestRoutes(app, getPrisma) {
     }
 
     const dest = String(destinationCountry || "").trim() || "Destination";
-    const subject = `Nouvelle demande d'envoi ${modeLabel} — ${dest}`;
-    const body = [
-      `Nouvelle demande d'envoi ${modeLabel} (créée via la plateforme).`,
-      ``,
-      `Contact email: ${contactEmail || "—"}`,
-      ``,
-      `Suivi (tracking): ${trackingNumber || "—"}`,
-      ``,
-      `Expéditeur: ${senderName || "—"} / ${senderPhone || "—"}`,
-      `Adresse de récupération: ${pickupAddress || "—"}`,
-      ``,
-      `Destinataire: ${recipientName || "—"} / ${recipientPhone || "—"}`,
-      `Pays destination: ${destinationCountry || "—"}`,
-      `Adresse destination: ${destinationAddress || "—"}`,
-      ``,
-      `Poids approx (kg): ${weightKg != null && weightKg !== "" ? String(weightKg) : "— (non fourni)"}`,
-      `Notes: ${notes || "—"}`,
-    ].join("\n");
+    const emailPayload = {
+      transportMode,
+      contactEmail,
+      trackingNumber,
+      senderName,
+      senderPhone,
+      pickupAddress,
+      recipientName,
+      recipientPhone,
+      destinationCountry,
+      destinationAddress,
+      weightKg,
+      notes,
+      photoBuf,
+      photoMime,
+    };
 
-    try {
-      await transporter.sendMail({
-        from: buildMailFrom(),
-        to,
-        subject,
-        text: body,
-        ...(contactEmail ? { replyTo: String(contactEmail) } : {}),
-        attachments: [
-          {
-            filename: "colis.jpg",
-            content: photoBuf,
-          },
-        ],
-      });
+    const subject = `[Expédition] Nouvelle demande ${modeLabel} — ${dest}`;
+    const body = buildShippingRequestPlainText(emailPayload);
+
+    let emailed = await sendShippingRequestEmailJs(emailPayload);
+
+    if (!emailed) {
+      const smtpHost = process.env.SMTP_HOST;
+      if (smtpHost && smtpHost !== "localhost") {
+        try {
+          const transporter = createSmtpTransporter();
+          await transporter.sendMail({
+            from: buildMailFrom(),
+            to,
+            subject,
+            text: body,
+            ...(contactEmail ? { replyTo: String(contactEmail) } : {}),
+            attachments: [
+              {
+                filename: photoMime.includes("png") ? "colis.png" : "colis.jpg",
+                content: photoBuf,
+              },
+            ],
+          });
+          emailed = true;
+          console.log(`[shipping-requests] SMTP fallback → ${to}`);
+        } catch (e) {
+          console.warn("[shipping-requests] SMTP fallback non envoyé:", e?.message || e);
+        }
+      }
+    }
+
+    if (emailed) {
       res.json({ ok: true, emailed: true });
-    } catch (e) {
-      console.warn("[shipping-requests] email non envoyé:", e?.message || e);
+    } else {
+      console.warn("[shipping-requests] email non envoyé (EmailJS + SMTP indisponibles).");
       res.json({
         ok: true,
         emailed: false,

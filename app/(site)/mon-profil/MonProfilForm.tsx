@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { Select, TextInput } from "@/app/site/components/Form";
+import { PhoneInput } from "@/app/site/components/PhoneInput";
+import { ensurePhoneWithDial } from "@/lib/phone-country";
 
 export type MePayload = {
   id: string;
@@ -40,7 +42,9 @@ export function MonProfilForm({
   const [firstName, setFirstName] = useState(readProfileString(prof, "firstName") || fromName.firstName);
   const [lastName, setLastName] = useState(readProfileString(prof, "lastName") || fromName.lastName);
   const [email] = useState(initial?.email ?? fallbackEmail);
-  const [phone, setPhone] = useState(readProfileString(prof, "phone"));
+  const [phone, setPhone] = useState(() =>
+    ensurePhoneWithDial(readProfileString(prof, "phone"), readProfileString(prof, "country") || "Bénin"),
+  );
   const [country, setCountry] = useState(readProfileString(prof, "country") || "Bénin");
   const [city, setCity] = useState(readProfileString(prof, "city"));
   const [district, setDistrict] = useState(readProfileString(prof, "district"));
@@ -92,11 +96,11 @@ export function MonProfilForm({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <TextInput label="Email" type="email" value={email} readOnly className="opacity-80" />
-            <TextInput
+            <PhoneInput
               label="Numéro de téléphone"
-              placeholder="+229 152629176"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={setPhone}
+              country={country}
             />
           </div>
           <p className="text-xs text-gray-500 -mt-2">L’email n’est pas modifiable depuis cet écran pour l’instant.</p>

@@ -47,23 +47,27 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
 
   const accountMatch: NavItem["match"] = accountHref === "/dashboard" ? "prefix" : "exact";
 
-  const clientNav: NavItem[] = isClient
-    ? [
-        { href: accountHref, label: accountLabel, match: accountMatch },
-        { href: "/mes-commandes", label: "Mes commandes", match: "prefix" },
-        { href: "/mes-avis", label: "Mes avis", match: "prefix" },
-      ]
-    : [{ href: accountHref, label: accountLabel, match: accountMatch }];
-
-  const mobileItems: NavItem[] = [
-    ...PUBLIC_NAV,
-    ...(isAuthed ? clientNav : []),
+  const accueilItem: NavItem = { href: "/mon-espace", label: "Accueil", match: "exact" };
+  const clientExtraNav: NavItem[] = [
+    { href: "/mes-commandes", label: "Mes commandes", match: "prefix" },
+    { href: "/mes-avis", label: "Mes avis", match: "prefix" },
   ];
+
+  const mainNav: NavItem[] = isClient
+    ? [accueilItem, ...PUBLIC_NAV, ...clientExtraNav]
+    : PUBLIC_NAV;
+
+  const accountNav: NavItem[] =
+    isAuthed && !isClient
+      ? [{ href: accountHref, label: accountLabel, match: accountMatch }]
+      : [];
+
+  const mobileItems: NavItem[] = isAuthed && !isClient ? [...PUBLIC_NAV, ...accountNav] : mainNav;
 
   return (
     <div className="flex flex-1 items-center justify-between gap-4">
       <nav className="hidden items-center gap-7 lg:flex" aria-label="Navigation principale">
-        {PUBLIC_NAV.map((item) => {
+        {mainNav.map((item) => {
           const active = isNavActive(pathname, item.href, item.match);
           return (
             <Link key={item.href} href={item.href} className={navLinkClass(active)} aria-current={active ? "page" : undefined}>
@@ -76,21 +80,23 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
       <div className="ml-auto flex items-center gap-2 lg:gap-5">
         {isAuthed ? (
           <>
-            <nav className="hidden items-center gap-5 lg:flex" aria-label="Mon compte">
-              {clientNav.map((item) => {
-                const active = isNavActive(pathname, item.href, item.match);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={navLinkClass(active)}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+            {accountNav.length > 0 ? (
+              <nav className="hidden items-center gap-5 lg:flex" aria-label="Mon compte">
+                {accountNav.map((item) => {
+                  const active = isNavActive(pathname, item.href, item.match);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={navLinkClass(active)}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            ) : null}
             <SiteSignOutButton className="btn btn-primary hidden lg:inline-flex" />
           </>
         ) : (

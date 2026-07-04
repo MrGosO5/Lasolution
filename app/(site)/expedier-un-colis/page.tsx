@@ -1,9 +1,26 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useSession } from "next-auth/react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { Select, TextArea, TextInput } from "@/app/site/components/Form";
+import { PhoneInput } from "@/app/site/components/PhoneInput";
 import { PageHeader } from "@/app/site/components/UI";
+import { ensurePhoneWithDial } from "@/lib/phone-country";
+
+function readProfileString(p: Record<string, unknown> | null | undefined, key: string): string {
+  const v = p?.[key];
+  return typeof v === "string" ? v : "";
+}
+
+function displayNameFromMe(
+  me: { name?: string | null; profile?: Record<string, unknown> | null } | null,
+  fallbackName: string,
+): string {
+  if (me?.name?.trim()) return me.name.trim();
+  const fromProf = `${readProfileString(me?.profile, "firstName")} ${readProfileString(me?.profile, "lastName")}`.trim();
+  return fromProf || fallbackName.trim();
+}
 
 function FormSection({
   title,
@@ -23,6 +40,9 @@ function FormSection({
 type Mode = "AIR" | "SEA";
 
 export default function ExpedierUnColisPage() {
+  const { data: session, status } = useSession();
+  const didPrefill = useRef(false);
+
   const [mode, setMode] = useState<Mode>("AIR");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +61,40 @@ export default function ExpedierUnColisPage() {
   const [notes, setNotes] = useState("");
 
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status !== "authenticated" || didPrefill.current) return;
+    didPrefill.current = true;
+
+    void (async () => {
+      let email = session?.user?.email ?? "";
+      let name = session?.user?.name ?? "";
+      let phone = "";
+
+      try {
+        const res = await fetch("/api/me");
+        if (res.ok) {
+          const me = (await res.json()) as {
+            email?: string;
+            name?: string | null;
+            profile?: Record<string, unknown> | null;
+          };
+          email = me.email ?? email;
+          name = displayNameFromMe(me, name);
+          phone = ensurePhoneWithDial(
+            readProfileString(me.profile, "phone"),
+            readProfileString(me.profile, "country") || "France",
+          );
+        }
+      } catch {
+        // session fallback
+      }
+
+      setContactEmail(email);
+      setSenderName(name);
+      setSenderPhone(phone);
+    })();
+  }, [status, session]);
 
   const canSubmit = useMemo(() => {
     if (!photoDataUrl) return false;
@@ -194,8 +248,19 @@ export default function ExpedierUnColisPage() {
                   onChange={(e) => setContactEmail(e.target.value)}
                   autoComplete="email"
                 />
-                <TextInput label="Nom complet de l’expéditeur (recommandé)" placeholder="Emile James" value={senderName} onChange={(e) => setSenderName(e.target.value)} />
-                <TextInput label="Numéro de l’expéditeur *" placeholder="+33 152629176" value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} />
+                <TextInput
+                  label="Nom complet de l’expéditeur (recommandé)"
+                  placeholder="Emile James"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                />
+                <PhoneInput
+                  label="Numéro de l’expéditeur *"
+                  value={senderPhone}
+                  onChange={setSenderPhone}
+                  country="France"
+                  required
+                />
               </div>
             </FormSection>
 
@@ -217,7 +282,13 @@ export default function ExpedierUnColisPage() {
             <FormSection title="Destinataire & livraison">
               <div className="grid gap-4 sm:grid-cols-2">
                 <TextInput label="Nom complet du destinataire *" placeholder="Nadège Akpovi" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} />
-                <TextInput label="Numéro du destinataire *" placeholder="+229 61 00 00 00" value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} />
+                <PhoneInput
+                  label="Numéro du destinataire *"
+                  value={recipientPhone}
+                  onChange={setRecipientPhone}
+                  country={destinationCountry}
+                  required
+                />
               </div>
               <div className="grid gap-4 sm:max-w-md">
                 <Select label="Pays de destination" defaultValue={destinationCountry} onChange={(e) => setDestinationCountry(e.target.value)}>

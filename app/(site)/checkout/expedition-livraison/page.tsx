@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { Select, TextArea, TextInput } from "@/app/site/components/Form";
+import { PhoneInput } from "@/app/site/components/PhoneInput";
 import { PageHeader } from "@/app/site/components/UI";
 import { cartSubtotal, loadCart, type Cart } from "@/app/site/cart";
 import { loadCheckoutDelivery, saveCheckoutDelivery } from "@/app/site/checkout-delivery";
@@ -107,7 +108,7 @@ export default function ExpeditionLivraisonPage() {
                 <option>Côte d&apos;Ivoire</option>
                 <option>Autre (préciser dans l&apos;adresse)</option>
               </Select>
-              <TextInput label="Numéro de téléphone" placeholder="+229 01 23 45 67 89" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <PhoneInput label="Numéro de téléphone" value={phone} onChange={setPhone} country={country} />
             </div>
 
             <TextInput

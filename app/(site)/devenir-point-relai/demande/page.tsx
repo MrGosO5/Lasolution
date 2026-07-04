@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { Select, TextArea, TextInput, Toggle } from "@/app/site/components/Form";
+import { PhoneInput } from "@/app/site/components/PhoneInput";
 import { PageHeader } from "@/app/site/components/UI";
 
 type StepId = "personal" | "relay" | "docs" | "confirm";
@@ -275,7 +276,13 @@ export default function DemandePointRelaiPage() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <TextInput label="Numéro de téléphone" placeholder="+33 152629176" value={form.phone} onChange={(e) => patch("phone", e.target.value)} required />
+                        <PhoneInput
+                          label="Numéro de téléphone"
+                          value={form.phone}
+                          onChange={(v) => patch("phone", v)}
+                          country={form.nationality}
+                          required
+                        />
                         {stepErrors.phone ? <p className="text-xs text-red-600 mt-1">{stepErrors.phone}</p> : null}
                       </div>
                       <div>
@@ -285,7 +292,12 @@ export default function DemandePointRelaiPage() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <TextInput label="Adresse" placeholder="France, Paris" value={form.address} onChange={(e) => patch("address", e.target.value)} />
-                      <TextInput label="WhatsApp (facultatif)" placeholder="+33 152629176" value={form.whatsapp} onChange={(e) => patch("whatsapp", e.target.value)} />
+                      <PhoneInput
+                        label="WhatsApp (facultatif)"
+                        value={form.whatsapp}
+                        onChange={(v) => patch("whatsapp", v)}
+                        country={form.nationality}
+                      />
                     </div>
                   </section>
                 ) : null}

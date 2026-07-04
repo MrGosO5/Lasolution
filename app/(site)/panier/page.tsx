@@ -33,25 +33,10 @@ export default function PanierPage() {
         />
       </Reveal>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-[1fr_0.85fr]">
+      <div className={`mt-10 grid gap-6 ${cart.items.length > 0 ? "md:grid-cols-[1fr_0.85fr]" : ""}`}>
+        {cart.items.length > 0 ? (
         <Reveal>
           <Card className="p-6">
-            {cart.items.length === 0 ? (
-              <div className="grid gap-4">
-                <div className="card p-6">
-                  <p className="text-sm font-semibold text-gray-900">Votre panier est vide</p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    Ajoutez un produit depuis une boutique pour créer votre première commande.
-                  </p>
-                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                    {/* Boutiques bientôt disponible — CTA masqué pour le moment */}
-                    <Link className="btn btn-primary" href="/connexion">
-                      Se connecter
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ) : (
               <div className="grid gap-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-700">
@@ -118,9 +103,9 @@ export default function PanierPage() {
                   );
                 })}
               </div>
-            )}
           </Card>
         </Reveal>
+        ) : null}
 
         <Reveal delayMs={120}>
           <div className="rounded-3xl bg-gradient-to-br from-white/85 to-white/55 ring-1 ring-black/5 shadow-xl shadow-gray-200/40 p-6 md:p-7">

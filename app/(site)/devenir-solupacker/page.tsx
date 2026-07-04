@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { Select, TextArea, TextInput, Toggle } from "@/app/site/components/Form";
+import { PhoneInput } from "@/app/site/components/PhoneInput";
 import { PageHeader } from "@/app/site/components/UI";
 
 type StepId = "personal" | "documents" | "experience" | "confirm";
@@ -287,11 +288,11 @@ export default function DevenirSolupackerPage() {
                       </Select>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <TextInput
+                      <PhoneInput
                         label="Numéro de téléphone"
-                        placeholder="+33 6 12 34 56 78"
                         value={form.phone}
-                        onChange={(e) => patch("phone", e.target.value)}
+                        onChange={(v) => patch("phone", v)}
+                        country={form.nationality}
                         required
                       />
                       {stepErrors.phone ? <p className="text-xs text-red-600 -mt-3">{stepErrors.phone}</p> : null}
@@ -312,11 +313,11 @@ export default function DevenirSolupackerPage() {
                         value={form.address}
                         onChange={(e) => patch("address", e.target.value)}
                       />
-                      <TextInput
+                      <PhoneInput
                         label="WhatsApp (facultatif)"
-                        placeholder="+33 6 12 34 56 78"
                         value={form.whatsapp}
-                        onChange={(e) => patch("whatsapp", e.target.value)}
+                        onChange={(v) => patch("whatsapp", v)}
+                        country={form.nationality}
                       />
                     </div>
                   </section>

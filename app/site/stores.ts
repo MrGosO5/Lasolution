@@ -14,7 +14,7 @@ export const STORES: Store[] = [
     name: "Amazon",
     subtitle: "Les meilleurs produits, livrés sans tracas.",
     heroLine: "Parcourez les meilleurs produits d’Amazon, et recevez-les chez vous sans tracas.",
-    logoSrc: "/icon/amazon_logo.png",
+    logoSrc: "/coming-soon/retailer-amazon.png",
   },
   {
     id: "aliexpress",
@@ -22,20 +22,21 @@ export const STORES: Store[] = [
     subtitle: "Des trouvailles à prix doux.",
     heroLine:
       "Parcourez les meilleurs produits de AliExpress, et recevez-les chez vous sans tracas.",
-    logoSrc: "/icon/aliexpress_logo.png",
+    logoSrc: "/coming-soon/retailer-aliexpress.png",
   },
   {
     id: "temu",
     name: "TEMU",
     subtitle: "Tendance et accessibles.",
     heroLine: "Parcourez les meilleurs produits de TEMU, et recevez-les chez vous sans tracas.",
+    logoSrc: "/coming-soon/retailer-temu.png",
   },
   {
     id: "shein",
     name: "SHEIN",
     subtitle: "Mode & accessoires.",
     heroLine: "Parcourez les meilleurs produits de SHEIN, et recevez-les chez vous sans tracas.",
-    logoSrc: "/icon/shein_logo.png",
+    logoSrc: "/coming-soon/retailer-shein.png",
   },
 ];
 
