@@ -1,12 +1,12 @@
 function resolveUserFromCredentials(email, password, config) {
-  const { adminEmail, adminPassword, clientPassword, partnerPassword, demoPartners } = config;
+  const { adminEmail, adminName, adminPassword, clientPassword, partnerPassword, demoPartners } = config;
   if (!email || !password) return null;
 
   const em = String(email).trim();
   const adminEm = String(adminEmail || "").trim();
 
   if (em.length > 0 && em.toLowerCase() === adminEm.toLowerCase() && password === adminPassword) {
-    return { id: "admin-1", email: em, role: "admin", name: "Administrateur" };
+    return { id: "admin-1", email: em, role: "admin", name: adminName || "Rivaros GOUDODE" };
   }
 
   if (password === clientPassword) {

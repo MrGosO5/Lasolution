@@ -12,6 +12,7 @@
     "db:migrate": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma migrate deploy",
     "db:migrate:dev": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma migrate dev",
     "db:seed": "node prisma/seed.js",
+    "db:seed:admin": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- node prisma/seed-admin.js",
     "db:seed:demo-orders": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- node prisma/seed-demo-orders.js",
     "db:seed:demo-testimonials": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- node prisma/seed-demo-testimonials.js",
     "db:studio": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- prisma studio",

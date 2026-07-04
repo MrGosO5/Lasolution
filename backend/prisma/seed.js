@@ -43,8 +43,8 @@ async function main() {
   const users = [
     {
       id: "admin-1",
-      email: "adminlasolution@gmail.com",
-      name: "Administrateur",
+      email: process.env.ADMIN_EMAIL || "rivaros.goudode@lasolution.org",
+      name: process.env.ADMIN_NAME || "Rivaros GOUDODE",
       role: "admin",
       plainPassword: demoPasswords.admin,
     },

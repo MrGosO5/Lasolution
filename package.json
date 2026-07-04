@@ -12,6 +12,7 @@
     "backend:dev": "npm --prefix backend run dev",
     "backend:migrate": "npm --prefix backend run db:migrate",
     "db:seed": "npm --prefix backend run db:seed",
+    "backend:seed:admin": "npm --prefix backend run db:seed:admin",
     "backend:seed:demo-orders": "npm --prefix backend run db:seed:demo-orders",
     "backend:seed:demo-testimonials": "npm --prefix backend run db:seed:demo-testimonials",
     "docker:db": "docker compose up -d postgres redis",

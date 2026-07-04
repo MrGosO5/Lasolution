@@ -13,7 +13,8 @@ const app = express();
 const port = process.env.BACKEND_PORT || 4000;
 
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3001";
-const adminEmail = process.env.ADMIN_EMAIL || "adminlasolution@gmail.com";
+const adminEmail = process.env.ADMIN_EMAIL || "rivaros.goudode@lasolution.org";
+const adminName = process.env.ADMIN_NAME || "Rivaros GOUDODE";
 const adminPassword = process.env.ADMIN_PASSWORD || "adminlasolution@x";
 const clientPassword = process.env.CLIENT_PASSWORD || "client";
 const partnerPassword = process.env.PARTNER_PASSWORD || "partner";
@@ -73,6 +74,7 @@ app.get("/health", (_req, res) => {
 
 setupRoutes(app, {
   adminEmail,
+  adminName,
   adminPassword,
   clientPassword,
   partnerPassword,
