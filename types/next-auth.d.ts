@@ -11,6 +11,7 @@ declare module "next-auth" {
     accessToken?: string | null;
     /** Stocké uniquement dans le JWT (getToken) — ne pas afficher côté client si possible */
     refreshToken?: string | null;
+    rememberMe?: boolean;
   }
 
   interface Session {
@@ -25,5 +26,6 @@ declare module "next-auth/jwt" {
     role: AppRole;
     accessToken?: string;
     refreshToken?: string;
+    sessionMaxAge?: number;
   }
 }

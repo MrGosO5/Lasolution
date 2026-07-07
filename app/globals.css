@@ -102,14 +102,36 @@ summary::-webkit-details-marker { display: none; }
 .card {
   display: block;
   border-radius: 1rem;
-  background: rgba(255,255,255,0.70);
-  border: 1px solid rgba(0,0,0,0.05);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
+  background: rgba(255,255,255,0.92);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(17,24,39,0.10);
+  box-shadow: 0 4px 16px rgba(17,24,39,0.08), 0 1px 3px rgba(17,24,39,0.06);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
 }
 .card:hover {
-  box-shadow: 0 10px 22px rgba(17,24,39,0.06);
-  transform: translateY(-2px);
+  background: rgba(255,255,255,0.98);
+  border-color: rgba(196,30,58,0.22);
+  box-shadow: 0 14px 30px rgba(17,24,39,0.12), 0 2px 6px rgba(17,24,39,0.08);
+  transform: translateY(-3px);
+}
+
+/* CTA de carte (lien d'action « Ouvrir → ») */
+.card-cta {
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--logo-red);
+}
+.card-cta__arrow {
+  display: inline-block;
+  transition: transform var(--transition-fast);
+}
+.card:hover .card-cta__arrow {
+  transform: translateX(4px);
 }
 
 /* Curseur « main » sur boutons, liens et cartes cliquables */

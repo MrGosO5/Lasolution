@@ -5,7 +5,6 @@ import { signOut } from "next-auth/react";
 type SiteSignOutButtonProps = {
   className?: string;
   children?: React.ReactNode;
-  /** Après déconnexion (défaut : page de connexion vitrine). */
   callbackUrl?: string;
 };
 
@@ -27,7 +26,11 @@ export function SiteSignOutButton({
       className={className}
       onClick={() => {
         void (async () => {
-          // redirect: false évite une redirection basée sur NEXTAUTH_URL (souvent le port API en dev).
+          try {
+            await fetch("/api/auth/logout-backend", { method: "POST" });
+          } catch {
+            /* best effort */
+          }
           await signOut({ redirect: false });
           window.location.assign(resolvePostSignOutUrl(callbackUrl));
         })();

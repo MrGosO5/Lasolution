@@ -26,7 +26,7 @@ async function main() {
     throw new Error("ADMIN_PASSWORD doit contenir au moins 8 caractères.");
   }
 
-  const passwordHash = hashPassword(plainPassword);
+  const passwordHash = await hashPassword(plainPassword);
   const existingById = await prisma.user.findUnique({ where: { id: adminId } });
   const existingByEmail = await prisma.user.findUnique({ where: { email } });
 
@@ -43,8 +43,8 @@ async function main() {
 
     return tx.user.upsert({
       where: { id: adminId },
-      update: { email, name, role: "admin", passwordHash },
-      create: { id: adminId, email, name, role: "admin", passwordHash },
+      update: { email, name, role: "admin", passwordHash, emailVerifiedAt: new Date() },
+      create: { id: adminId, email, name, role: "admin", passwordHash, emailVerifiedAt: new Date() },
     });
   });
 

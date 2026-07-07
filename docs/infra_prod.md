@@ -55,7 +55,7 @@ mv Lasolution /var/www/lasolution
 cd /var/www/lasolution
 ```
 
-Fichier `.env.local` créé à la racine (`/var/www/lasolution/.env.local`) avec `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, clés EmailJS, `SITE_PREVIEW_*`.
+Fichier `.env.local` créé à la racine (`/var/www/lasolution/.env.local`) avec `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `API_JWT_SECRET`, `AUTH_ENV_FALLBACK=false`, `STRIPE_SECRET_KEY`, clés Turnstile, `DATA_ENCRYPTION_KEY`, clés EmailJS, `SITE_PREVIEW_*`.
 
 Installation des dépendances :
 
@@ -160,6 +160,14 @@ certbot --nginx -d lasolution.org -d www.lasolution.org
 ```
 
 Certificat Let's Encrypt valide jusqu'au **21/09/2026**, renouvellement automatique configuré.
+
+En-têtes de sécurité recommandés au niveau Nginx (en plus de Next.js) :
+
+```nginx
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+```
 
 Mise à jour ensuite de `NEXTAUTH_URL="https://lasolution.org"` dans `.env.local`, puis `pm2 restart all`.
 

@@ -30,7 +30,10 @@ export function PartnerEspaceHub({ role }: { role: Exclude<AppRole, "admin" | "c
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
               Accédez à votre tableau et outils dédiés à votre rôle.
             </p>
-            <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir l’espace →</p>
+            <p className="card-cta">
+              Ouvrir l’espace
+              <span className="card-cta__arrow" aria-hidden="true">→</span>
+            </p>
           </Link>
         </Reveal>
       ) : null}
@@ -39,7 +42,10 @@ export function PartnerEspaceHub({ role }: { role: Exclude<AppRole, "admin" | "c
           <Link href={c.href} className="card h-full p-6 focus-ring">
             <p className="text-sm font-semibold text-gray-900">{c.title}</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">{c.desc}</p>
-            <p className="mt-4 text-sm font-semibold text-gray-900">Voir →</p>
+            <p className="card-cta">
+              Voir
+              <span className="card-cta__arrow" aria-hidden="true">→</span>
+            </p>
           </Link>
         </Reveal>
       ))}
@@ -47,14 +53,20 @@ export function PartnerEspaceHub({ role }: { role: Exclude<AppRole, "admin" | "c
         <Link href="/notifications" className="card h-full p-6 focus-ring">
           <p className="text-sm font-semibold text-gray-900">Notifications</p>
           <p className="mt-2 text-sm text-gray-600 leading-relaxed">Messages et alertes liés à votre activité.</p>
-          <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
+          <p className="card-cta">
+            Ouvrir
+            <span className="card-cta__arrow" aria-hidden="true">→</span>
+          </p>
         </Link>
       </Reveal>
       <Reveal delayMs={250} className="h-full">
         <Link href="/parametres" className="card h-full p-6 focus-ring">
           <p className="text-sm font-semibold text-gray-900">Paramètres</p>
           <p className="mt-2 text-sm text-gray-600 leading-relaxed">Sécurité du compte et préférences.</p>
-          <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
+          <p className="card-cta">
+            Ouvrir
+            <span className="card-cta__arrow" aria-hidden="true">→</span>
+          </p>
         </Link>
       </Reveal>
     </div>

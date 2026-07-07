@@ -7,6 +7,11 @@ const { Prisma } = require("@prisma/client");
 const crypto = require("crypto");
 const { hashPassword } = require("../auth/password");
 const { setupAuthRoutes } = require("./authRoutes");
+const { setupMfaRoutes } = require("./mfaRoutes");
+const { revokeAllUserRefreshTokens } = require("../auth/tokens");
+const { validatePasswordPolicy } = require("../auth/passwordPolicy");
+const { requireTurnstile } = require("../middleware/turnstile");
+const { RESET_CAPTCHA_THRESHOLD, countRecentSecurityEvents } = require("./authRoutes");
 const { setupOrderParcelRoutes } = require("./ordersParcels");
 const { setupTestimonialRoutes } = require("./testimonials");
 const { setupMissionRoutes } = require("./missions");
@@ -582,6 +587,15 @@ function setupPublicPasswordResetRequest(app) {
     if (!prisma) {
       return res.status(503).json({ error: "Base indisponible." });
     }
+
+    const recentResets = await countRecentSecurityEvents(prisma, {
+      email,
+      type: "password_reset_request",
+    });
+    if (recentResets >= RESET_CAPTCHA_THRESHOLD) {
+      if (!(await requireTurnstile(req, res))) return;
+    }
+
     try {
       await prisma.securityEvent.create({
         data: {
@@ -654,8 +668,12 @@ function setupPublicPasswordResetComplete(app) {
     }
     const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
     const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
-    if (token.length < 32 || newPassword.length < 8) {
-      return res.status(400).json({ error: "Lien invalide ou mot de passe trop court (8 caractères min.)." });
+    if (token.length < 32) {
+      return res.status(400).json({ error: "Lien invalide." });
+    }
+    const policy = await validatePasswordPolicy(newPassword);
+    if (!policy.ok) {
+      return res.status(400).json({ error: policy.error });
     }
     const tokenHash = sha256Hex(token);
     const now = new Date();
@@ -673,7 +691,7 @@ function setupPublicPasswordResetComplete(app) {
     }
     let newHash;
     try {
-      newHash = hashPassword(newPassword);
+      newHash = await hashPassword(newPassword);
     } catch (e) {
       return res.status(500).json({ error: String(e.message || e) });
     }
@@ -686,6 +704,7 @@ function setupPublicPasswordResetComplete(app) {
           data: { usedAt: now },
         });
       });
+      await revokeAllUserRefreshTokens(prisma, row.userId);
       await prisma.securityEvent.create({
         data: {
           type: "password_reset_complete",
@@ -1016,6 +1035,7 @@ function setupAdminStatsRoute(app) {
 
 function setupRoutes(app, config) {
   setupAuthRoutes(app, getPrisma, config);
+  setupMfaRoutes(app, getPrisma);
   setupOrderParcelRoutes(app, getPrisma);
   setupTestimonialRoutes(app, getPrisma);
   setupMissionRoutes(app, getPrisma);

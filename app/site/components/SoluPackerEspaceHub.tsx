@@ -44,7 +44,10 @@ export function SoluPackerEspaceHub() {
           <Link href={c.href} className="card h-full p-6 focus-ring">
             <p className="text-sm font-semibold text-gray-900">{c.title}</p>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">{c.desc}</p>
-            <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
+            <p className="card-cta">
+              Ouvrir
+              <span className="card-cta__arrow" aria-hidden="true">→</span>
+            </p>
           </Link>
         </Reveal>
       ))}

@@ -166,4 +166,20 @@ function passwordResetEmail({ resetLink }) {
   return { subject, html, text };
 }
 
-module.exports = { welcomeEmail, orderConfirmationEmail, orderStatusEmail, passwordResetEmail };
+/**
+ * Email de vérification d'adresse.
+ */
+function emailVerificationEmail({ name, verifyLink }) {
+  const subject = "Confirmez votre adresse email — La Solution";
+  const html = layout(`
+    ${h1("Confirmez votre email")}
+    ${p(`Bonjour ${name || ""},`)}
+    ${p("Merci de votre inscription. Cliquez sur le bouton ci-dessous pour confirmer votre adresse email et pouvoir passer commande. Ce lien est valable <strong>24 heures</strong>.")}
+    ${btn(verifyLink, "Confirmer mon email")}
+    ${p("<small style='color:#71717A;'>Si vous n'avez pas créé de compte, ignorez ce message.</small>")}
+  `);
+  const text = `Confirmez votre email\n\nBonjour ${name || ""},\n\nCliquez sur ce lien (valable 24 h) :\n${verifyLink}\n\nL'équipe La Solution`;
+  return { subject, html, text };
+}
+
+module.exports = { welcomeEmail, orderConfirmationEmail, orderStatusEmail, passwordResetEmail, emailVerificationEmail };

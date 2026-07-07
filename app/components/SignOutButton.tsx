@@ -8,6 +8,11 @@ export function SignOutButton() {
       type="button"
       onClick={() => {
         void (async () => {
+          try {
+            await fetch("/api/auth/logout-backend", { method: "POST" });
+          } catch {
+            /* best effort */
+          }
           await signOut({ redirect: false });
           window.location.assign("/connexion");
         })();

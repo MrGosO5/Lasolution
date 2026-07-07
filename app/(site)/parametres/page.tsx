@@ -5,6 +5,7 @@ import { lasolutionFetchJson } from "@/lib/lasolution-api";
 import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
 import { ParametresForm } from "./ParametresForm";
+import { SessionsPanel } from "./SessionsPanel";
 
 export default async function ParametresPage() {
   const session = await getServerSession(authOptions);
@@ -31,6 +32,10 @@ export default async function ParametresPage() {
       </Reveal>
 
       <ParametresForm initialProfile={profile} />
+
+      <div className="mt-12">
+        <SessionsPanel />
+      </div>
     </main>
   );
 }

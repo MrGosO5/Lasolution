@@ -42,6 +42,11 @@ model User {
   name         String?
   role         UserRole
   passwordHash String?
+  emailVerifiedAt DateTime?
+  failedLoginCount Int @default(0)
+  lockedUntil DateTime?
+  totpSecret String?
+  mfaEnabled Boolean @default(false)
   /// Infos profil vitrine (téléphone, adresse, préférences langue/devise, etc.)
   profile      Json?
   createdAt    DateTime  @default(now())
@@ -54,10 +59,24 @@ model User {
   refreshTokens  RefreshToken[]
   testimonials   OrderTestimonial[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  oauthAccounts OAuthAccount[]
 }
 
 /// Jeton usage unique pour « mot de passe oublié » (hash stocké, pas le brut).
 model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
   id        String    @id @default(cuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -90,7 +109,25 @@ model RefreshToken {
   tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  lastUsedAt DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model OAuthAccount {
+  id                String @id @default(cuid())
+  userId            String
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model WarehouseAddress {

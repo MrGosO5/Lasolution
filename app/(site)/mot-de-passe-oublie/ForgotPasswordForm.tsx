@@ -3,24 +3,32 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { TextInput } from "@/app/site/components/Form";
+import { TurnstileWidget } from "@/app/site/components/TurnstileWidget";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showCaptcha, setShowCaptcha] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (showCaptcha && !captchaToken) {
+      setErrorMessage("Veuillez compléter la vérification anti-robot.");
+      return;
+    }
     setStatus("loading");
     setErrorMessage(null);
     try {
       const res = await fetch("/api/password-reset-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, captchaToken }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; code?: string };
       if (!res.ok) {
+        if (data.code === "CAPTCHA_REQUIRED") setShowCaptcha(true);
         setStatus("error");
         setErrorMessage(data.error || "Demande impossible.");
         return;
@@ -64,12 +72,13 @@ export function ForgotPasswordForm() {
         autoComplete="email"
       />
       {errorMessage ? <p className="mt-3 text-sm text-red-600">{errorMessage}</p> : null}
+      {showCaptcha ? <TurnstileWidget onToken={setCaptchaToken} className="mt-3" /> : null}
       <button
         type="submit"
         disabled={status === "loading"}
         className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-[var(--logo-red)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--logo-red)]/20 transition-smooth hover:bg-[var(--logo-red-dark)] disabled:opacity-60"
       >
-        {status === "loading" ? "Envoi…" : "Envoyer le code de réinitialisation"}
+        {status === "loading" ? "Envoi…" : "Envoyer le lien de réinitialisation"}
       </button>
       <p className="mt-3 text-xs text-gray-500">
         Enregistrement de la demande côté plateforme + notification équipe si SMTP configuré.

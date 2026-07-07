@@ -24,6 +24,7 @@
   "dependencies": {
     "@emailjs/nodejs": "^5.0.2",
     "@prisma/client": "^6.3.1",
+    "argon2": "^0.44.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -31,6 +32,8 @@
     "jsonwebtoken": "^9.0.2",
     "lasolution-dashboard": "file:..",
     "nodemailer": "^6.9.16",
+    "otplib": "^13.4.1",
+    "qrcode": "^1.5.4",
     "stripe": "^17.7.0"
   },
   "devDependencies": {

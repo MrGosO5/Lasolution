@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const path = require("path");
 const { setupRoutes } = require("./routes");
 const { mountStripeWebhook } = require("./routes/stripeWebhook");
+const { validateEnv } = require("./config/validateEnv");
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
 dotenv.config();
@@ -53,6 +54,12 @@ app.use(
   })
 );
 
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
 /** Stripe exige le corps brut — avant express.json() */
 mountStripeWebhook(app);
 
@@ -80,6 +87,8 @@ setupRoutes(app, {
   partnerPassword,
   demoPartners,
 });
+
+validateEnv();
 
 app.listen(port, () => {
   console.log(`Lasolution backend running on http://localhost:${port}`);

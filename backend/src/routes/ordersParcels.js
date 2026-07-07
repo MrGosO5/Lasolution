@@ -1,12 +1,17 @@
 const { Prisma } = require("@prisma/client");
 const { parseOptionalDate, syncOrderStatusFromParcels } = require("../lib/parcelWorkflow");
-const { requireAuth, requireRoles } = require("../middleware/auth");
+const { requireAuth, requireRoles, strictRateLimit, requireVerifiedEmail } = require("../middleware/auth");
 const { hashPassword, verifyPassword } = require("../auth/password");
+const { validatePasswordPolicy } = require("../auth/passwordPolicy");
+const { revokeAllUserRefreshTokens } = require("../auth/tokens");
 const crypto = require("crypto");
 const { saveOrderProof, deleteProofByPublicPath } = require("../utils/mediaProof");
 const { sendMail, createSmtpTransporter, buildMailFrom } = require("../emails/mailer");
 const { orderStatusEmail } = require("../emails/templates");
+const { encryptJsonFields, decryptJsonFields } = require("../crypto/fieldEncryption");
 const { registerMeTestimonialsListRoute } = require("./testimonials");
+
+const PROFILE_ENCRYPT_KEYS = ["phone"];
 
 function isOrderDelivered(order) {
   if (!order) return false;
@@ -57,7 +62,11 @@ function setupOrderParcelRoutes(app, getPrisma) {
           select: { id: true, email: true, name: true, role: true, profile: true },
         });
         if (u) {
-          return res.json(u);
+          const profile =
+            u.profile && typeof u.profile === "object"
+              ? decryptJsonFields(u.profile, PROFILE_ENCRYPT_KEYS)
+              : u.profile;
+          return res.json({ ...u, profile });
         }
       } catch (e) {
         console.warn("[GET /me] prisma:", e.message);
@@ -98,7 +107,7 @@ function setupOrderParcelRoutes(app, getPrisma) {
         existing.profile && typeof existing.profile === "object" && !Array.isArray(existing.profile)
           ? existing.profile
           : {};
-      data.profile = { ...prev, ...profile };
+      data.profile = encryptJsonFields({ ...prev, ...profile }, PROFILE_ENCRYPT_KEYS);
     }
 
     if (Object.keys(data).length === 0) {
@@ -114,18 +123,23 @@ function setupOrderParcelRoutes(app, getPrisma) {
       data,
       select: { id: true, email: true, name: true, role: true, profile: true },
     });
-    res.json(updated);
+    const profileOut =
+      updated.profile && typeof updated.profile === "object"
+        ? decryptJsonFields(updated.profile, PROFILE_ENCRYPT_KEYS)
+        : updated.profile;
+    res.json({ ...updated, profile: profileOut });
   });
 
-  app.post("/me/password", requireAuth, async (req, res) => {
+  app.post("/me/password", strictRateLimit, requireAuth, async (req, res) => {
     const prisma = getPrisma();
     if (!prisma) {
       return res.status(503).json({ error: "Base indisponible." });
     }
     const userId = req.auth.sub;
     const { currentPassword, newPassword } = req.body || {};
-    if (typeof newPassword !== "string" || newPassword.length < 8) {
-      return res.status(400).json({ error: "Le nouveau mot de passe doit contenir au moins 8 caractères." });
+    const policy = await validatePasswordPolicy(newPassword);
+    if (!policy.ok) {
+      return res.status(400).json({ error: policy.error });
     }
     const row = await prisma.user.findUnique({
       where: { id: userId },
@@ -140,16 +154,17 @@ function setupOrderParcelRoutes(app, getPrisma) {
           "Ce compte n’a pas de mot de passe géré en ligne (compte démo). Créez un compte via l’inscription pour définir un mot de passe.",
       });
     }
-    if (!verifyPassword(String(currentPassword || ""), row.passwordHash)) {
+    if (!(await verifyPassword(String(currentPassword || ""), row.passwordHash))) {
       return res.status(401).json({ error: "Mot de passe actuel incorrect." });
     }
     let newHash;
     try {
-      newHash = hashPassword(newPassword);
+      newHash = await hashPassword(newPassword);
     } catch (e) {
       return res.status(500).json({ error: String(e.message || e) });
     }
     await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+    await revokeAllUserRefreshTokens(prisma, userId);
     try {
       await prisma.securityEvent.create({
         data: {
@@ -503,7 +518,7 @@ function setupOrderParcelRoutes(app, getPrisma) {
     res.json({ ok: true, orderId: updated.id, status: updated.status });
   });
 
-  app.post("/orders", ...clientOrAdmin, async (req, res) => {
+  app.post("/orders", ...clientOrAdmin, requireVerifiedEmail(getPrisma), async (req, res) => {
     const prisma = getPrisma();
     if (!prisma) return res.status(503).json({ error: "Base indisponible." });
 

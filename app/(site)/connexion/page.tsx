@@ -12,6 +12,7 @@ import {
   applyRoleToDefaultHub,
   sanitizeSiteLoginCallback,
 } from "@/lib/site-login-redirect";
+import { TurnstileWidget } from "@/app/site/components/TurnstileWidget";
 import type { AppRole } from "@/types/app-role";
 
 export default function ConnexionSitePage() {
@@ -25,6 +26,11 @@ export default function ConnexionSitePage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [showMfa, setShowMfa] = useState(false);
   const didRedirectAuthed = useRef(false);
 
   const callbackRaw = searchParams.get("callbackUrl");
@@ -48,14 +54,25 @@ export default function ConnexionSitePage() {
     setLoading(true);
 
     try {
+      if (showCaptcha && !captchaToken) {
+        setError("Veuillez compléter la vérification anti-robot.");
+        setLoading(false);
+        return;
+      }
+
       const res = await signIn("credentials", {
         email: email.trim(),
         password,
+        totpCode: totpCode || undefined,
+        captchaToken: captchaToken || undefined,
+        rememberMe: rememberMe ? "true" : "false",
         redirect: false,
       });
 
       if (res?.error || !res?.ok) {
-        setError("Connexion refusée. Vérifiez votre email et mot de passe.");
+        setShowCaptcha(true);
+        setShowMfa(true);
+        setError("Connexion refusée. Vérifiez vos identifiants, le code MFA si requis, ou complétez le CAPTCHA.");
         setLoading(false);
         return;
       }
@@ -129,9 +146,26 @@ export default function ConnexionSitePage() {
                 required
               />
 
+              {showMfa ? (
+                <TextInput
+                  label="Code d'authentification (MFA)"
+                  placeholder="123456"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  autoComplete="one-time-code"
+                />
+              ) : null}
+
+              {showCaptcha ? <TurnstileWidget onToken={setCaptchaToken} /> : null}
+
               <div className="flex items-center justify-between gap-4">
                 <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" className="h-4 w-4" defaultChecked />
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   Rester connecté(e)
                 </label>
                 <Link className="text-sm font-semibold text-gray-900 hover:underline" href="/mot-de-passe-oublie">

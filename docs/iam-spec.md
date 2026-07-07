@@ -1,4 +1,4 @@
-# IAM — spécification (implémentation progressive)
+# IAM — spécification (état implémenté)
 
 ## Rôles
 
@@ -11,24 +11,36 @@
 | `solu_livreur`  | Courses, shifts, preuve livraison      |
 | `ambassadeur`   | Commissions, messages, wallet          |
 
-## Auth actuelle (dev)
+## Socle implémenté
 
-- **NextAuth** + backend Express `POST /auth/login`.
-- Mots de passe via variables d’environnement : `ADMIN_*`, `CLIENT_PASSWORD`, `PARTNER_PASSWORD` (mot de passe partagé partenaires en dev).
+- **NextAuth** (Credentials + Google optionnel) + backend Express.
+- **Argon2id** pour les nouveaux mots de passe ; re-hash lazy depuis PBKDF2 au login.
+- **`POST /auth/login`** : verrouillage compte, rate limit IP + email, MFA TOTP si `MFA_REQUIRED_ROLES`, Turnstile après échecs.
+- **`POST /auth/register`** : politique MDP (12+ car., liste locale + HIBP), Turnstile, email de vérification.
+- **`POST /auth/logout`** : révocation refresh + `SecurityEvent` `logout`.
+- **`POST /auth/refresh`** : rotation + rate limit.
+- **`GET/DELETE /auth/sessions`** : gestion des appareils connectés.
+- **Vérification email** : connexion OK ; `POST /orders` bloqué si `emailVerifiedAt` null.
+- **Reset password** : tokens hashés, révocation sessions, Turnstile si abus.
+- **RBAC** : `requireAuth` + `requireRoles` ; rate limit Redis (fallback mémoire).
+- **OAuth** : `POST /auth/oauth/sync` + table `OAuthAccount` (Google si variables définies).
 
-## Implémenté dans le repo (socle API)
+## Variables clés
 
-- **`POST /auth/login`** : upsert `User` en base, enregistrement **`SecurityEvent`** (`login_ok` / `login_fail`), émission **`accessToken`** (JWT, `API_JWT_SECRET`) + **`refreshToken`** (opaque, table `RefreshToken`) si PostgreSQL disponible.
-- **`POST /auth/refresh`** : rotation refresh (révocation de l’ancien jeton).
-- **RBAC** sur routes métier : header `Authorization: Bearer <accessToken>`.
-- **Rate limit** léger en mémoire sur `/auth/login` (à remplacer par Redis en prod).
+| Variable | Usage |
+|----------|--------|
+| `API_JWT_SECRET` | JWT API (15 min) |
+| `NEXTAUTH_SECRET` | Session NextAuth |
+| `AUTH_ENV_FALLBACK` | `false` en prod (désactive login env) |
+| `MFA_REQUIRED_ROLES` | ex. `admin` |
+| `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | CAPTCHA |
+| `DATA_ENCRYPTION_KEY` | Chiffrement téléphone profil |
+| `OAUTH_INTERNAL_SECRET` | Sync OAuth backend |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth Google (optionnel) |
 
-## Évolutions prévues
+## Documentation associée
 
-- Hash **Argon2id** en base (`User.passwordHash`) via Prisma.
-- **MFA** TOTP pour admin (option `MFA_REQUIRED_ROLES`).
-- **OAuth** Google/Apple : table `OAuthAccount`.
-
-## Rate limiting (cible prod)
-
-- Redis sur `/auth/login` + politiques par IP / compte.
+- [`auth-cookies-policy.md`](./auth-cookies-policy.md)
+- [`runbook-rotation-secrets.md`](./runbook-rotation-secrets.md)
+- [`data-encryption.md`](./data-encryption.md)
+- [`infra_prod.md`](./infra_prod.md)

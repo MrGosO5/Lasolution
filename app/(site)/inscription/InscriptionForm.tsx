@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Select, TextInput, Toggle } from "@/app/site/components/Form";
+import { TurnstileWidget } from "@/app/site/components/TurnstileWidget";
 
 export function InscriptionForm() {
   const router = useRouter();
@@ -13,11 +14,17 @@ export function InscriptionForm() {
   const [country, setCountry] = useState("France");
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!captchaToken) {
+      setStatus("error");
+      setErrorMessage("Veuillez compléter la vérification anti-robot.");
+      return;
+    }
     setStatus("loading");
     setErrorMessage(null);
     try {
@@ -31,6 +38,7 @@ export function InscriptionForm() {
           country,
           password,
           acceptTerms,
+          captchaToken,
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -39,7 +47,7 @@ export function InscriptionForm() {
         setErrorMessage(data.error || "Inscription impossible.");
         return;
       }
-      router.push("/connexion?registered=1");
+      router.push(`/verifier-email?email=${encodeURIComponent(email.trim())}`);
     } catch {
       setStatus("error");
       setErrorMessage("Réseau indisponible.");
@@ -76,7 +84,7 @@ export function InscriptionForm() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
-        minLength={8}
+        minLength={12}
         autoComplete="new-password"
       />
 
@@ -87,6 +95,8 @@ export function InscriptionForm() {
           onChange={setAcceptTerms}
         />
       </div>
+
+      <TurnstileWidget onToken={setCaptchaToken} className="mt-2 flex justify-center" />
 
       {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
 

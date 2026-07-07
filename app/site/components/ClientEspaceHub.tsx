@@ -33,7 +33,10 @@ export function ClientEspaceHub({ session }: { session: Session }) {
             <Link href={t.href} className="card h-full p-6 focus-ring">
               <p className="text-sm font-semibold text-gray-900">{t.title}</p>
               <p className="mt-2 text-sm text-gray-600 leading-relaxed">{t.desc}</p>
-              <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
+              <p className="card-cta">
+                Ouvrir
+                <span className="card-cta__arrow" aria-hidden="true">→</span>
+              </p>
             </Link>
           </Reveal>
         ))}
@@ -43,7 +46,10 @@ export function ClientEspaceHub({ session }: { session: Session }) {
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
               Amazon, AliExpress, TEMU, SHEIN… Parcourez les catalogues et ajoutez au panier.
             </p>
-            <p className="mt-4 text-sm font-semibold text-gray-900">Voir les boutiques →</p>
+            <p className="card-cta">
+            Voir les boutiques
+            <span className="card-cta__arrow" aria-hidden="true">→</span>
+          </p>
           </Link>
         </Reveal>
         <Reveal delayMs={80 + (tabs.length + 1) * 70} className="h-full">
@@ -52,7 +58,10 @@ export function ClientEspaceHub({ session }: { session: Session }) {
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
               Consultez vos articles, ajustez les quantités et passez au paiement.
             </p>
-            <p className="mt-4 text-sm font-semibold text-gray-900">Voir le panier →</p>
+            <p className="card-cta">
+            Voir le panier
+            <span className="card-cta__arrow" aria-hidden="true">→</span>
+          </p>
           </Link>
         </Reveal>
         <Reveal delayMs={80 + (tabs.length + 2) * 70} className="h-full">
@@ -61,7 +70,10 @@ export function ClientEspaceHub({ session }: { session: Session }) {
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
               Créez une demande d&apos;expédition et suivez votre envoi de colis.
             </p>
-            <p className="mt-4 text-sm font-semibold text-gray-900">Ouvrir →</p>
+            <p className="card-cta">
+            Ouvrir
+            <span className="card-cta__arrow" aria-hidden="true">→</span>
+          </p>
           </Link>
         </Reveal>
       </div>

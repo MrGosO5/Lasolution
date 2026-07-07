@@ -1,4 +1,12 @@
+function isEnvFallbackEnabled() {
+  if (process.env.AUTH_ENV_FALLBACK === "false") return false;
+  if (process.env.NODE_ENV === "production") return false;
+  return true;
+}
+
 function resolveUserFromCredentials(email, password, config) {
+  if (!isEnvFallbackEnabled()) return null;
+
   const { adminEmail, adminName, adminPassword, clientPassword, partnerPassword, demoPartners } = config;
   if (!email || !password) return null;
 
@@ -53,4 +61,4 @@ async function ensureUserInDb(prisma, user) {
   }
 }
 
-module.exports = { resolveUserFromCredentials, ensureUserInDb };
+module.exports = { resolveUserFromCredentials, ensureUserInDb, isEnvFallbackEnabled };
