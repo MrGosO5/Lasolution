@@ -1,6 +1,7 @@
 const { createSmtpTransporter, buildMailFrom } = require("../emails/mailer");
 const { sendShippingRequestEmailJs } = require("../emails/emailjsShipping");
 const { buildShippingRequestPlainText } = require("../emails/shippingRequestEmail");
+const { requireAuth, requireRoles } = require("../middleware/auth");
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -92,6 +93,7 @@ function setupShippingRequestRoutes(app, getPrisma) {
         await prisma.securityEvent.create({
           data: {
             type: "shipping_request",
+            userId: req.auth?.sub || null,
             email: isNonEmptyString(contactEmail) ? String(contactEmail).trim().slice(0, 320) : null,
             ip: req.ip || null,
             userAgent: (req.get("user-agent") || "").slice(0, 512) || null,
@@ -185,7 +187,59 @@ function setupShippingRequestRoutes(app, getPrisma) {
 
   /** Rétrocompat : force le mode aérien si l’ancien frontend appelle encore cette URL. */
   app.post("/shipping-requests/air", (req, res) => handleShippingRequest(req, res, "AIR"));
+
+  // Variante authentifiée (client) : associe la demande au userId.
+  app.post("/me/shipping-requests", requireAuth, requireRoles("client"), (req, res) =>
+    handleShippingRequest(req, res, undefined)
+  );
+
+  // Liste des demandes du client connecté.
+  app.get("/me/shipping-requests", requireAuth, requireRoles("client"), async (req, res) => {
+    const prisma = typeof getPrisma === "function" ? getPrisma() : null;
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const rawLimit = req.query?.limit;
+    const limit = Math.max(1, Math.min(parseInt(String(rawLimit || "50"), 10) || 50, 200));
+
+    const events = await prisma.securityEvent.findMany({
+      where: { type: "shipping_request", userId: req.auth.sub },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: { id: true, createdAt: true, meta: true },
+    });
+
+    res.json({ events });
+  });
 }
 
-module.exports = { setupShippingRequestRoutes };
+function setupAdminShippingRequestRoutes(app, getPrisma) {
+  const adminOnly = [requireAuth, requireRoles("admin")];
+
+  app.get("/admin/shipping-requests", ...adminOnly, async (req, res) => {
+    const prisma = typeof getPrisma === "function" ? getPrisma() : null;
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const rawLimit = req.query?.limit;
+    const limit = Math.max(1, Math.min(parseInt(String(rawLimit || "50"), 10) || 50, 200));
+
+    const events = await prisma.securityEvent.findMany({
+      where: { type: "shipping_request" },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        email: true,
+        ip: true,
+        userAgent: true,
+        type: true,
+        createdAt: true,
+        meta: true,
+      },
+    });
+
+    res.json({ events });
+  });
+}
+
+module.exports = { setupShippingRequestRoutes, setupAdminShippingRequestRoutes };
 

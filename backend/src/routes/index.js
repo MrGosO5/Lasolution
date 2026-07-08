@@ -15,7 +15,7 @@ const { RESET_CAPTCHA_THRESHOLD, countRecentSecurityEvents } = require("./authRo
 const { setupOrderParcelRoutes } = require("./ordersParcels");
 const { setupTestimonialRoutes } = require("./testimonials");
 const { setupMissionRoutes } = require("./missions");
-const { setupShippingRequestRoutes } = require("./shippingRequests");
+const { setupShippingRequestRoutes, setupAdminShippingRequestRoutes } = require("./shippingRequests");
 const { requireAuth, requireRoles, strictRateLimit } = require("../middleware/auth");
 const { sendMail, createSmtpTransporter, buildMailFrom } = require("../emails/mailer");
 const {
@@ -1040,6 +1040,7 @@ function setupRoutes(app, config) {
   setupTestimonialRoutes(app, getPrisma);
   setupMissionRoutes(app, getPrisma);
   setupShippingRequestRoutes(app, getPrisma);
+  setupAdminShippingRequestRoutes(app, getPrisma);
   setupPartnerOpsRoutes(app);
   setupAdminStatsRoute(app);
   setupAdminUsersRoute(app);

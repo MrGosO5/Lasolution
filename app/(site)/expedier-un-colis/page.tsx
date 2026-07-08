@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Reveal } from "@/app/site/components/Reveal";
 import { Select, TextArea, TextInput } from "@/app/site/components/Form";
@@ -39,8 +40,49 @@ function FormSection({
 
 type Mode = "AIR" | "SEA";
 
+async function compressImageToJpegDataUrl(file: File, maxDim = 520, quality = 0.72): Promise<string> {
+  // EmailJS limite la taille des variables : on réduit l'image avant de l'encoder en base64.
+  // On renvoie toujours du JPEG pour maximiser la réduction.
+  return new Promise<string>((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        if (!w || !h) throw new Error("IMAGE_DIMENSIONS_MISSING");
+
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        const outW = Math.max(1, Math.round(w * scale));
+        const outH = Math.max(1, Math.round(h * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("CANVAS_CONTEXT_MISSING");
+
+        ctx.drawImage(img, 0, 0, outW, outH);
+        const out = canvas.toDataURL("image/jpeg", quality);
+        resolve(out);
+      } catch (e) {
+        reject(e);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("IMAGE_LOAD_ERROR"));
+    };
+    img.src = url;
+  });
+}
+
 export default function ExpedierUnColisPage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didPrefill = useRef(false);
 
   const [mode, setMode] = useState<Mode>("AIR");
@@ -61,6 +103,14 @@ export default function ExpedierUnColisPage() {
   const [notes, setNotes] = useState("");
 
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+
+  const isClient = session?.user?.role === "client";
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (status !== "authenticated" || didPrefill.current) return;
@@ -172,10 +222,13 @@ export default function ExpedierUnColisPage() {
         emailed?: boolean;
         warning?: string;
       };
-      if (data.warning) {
-        setSuccess(data.warning);
-      } else {
-        setSuccess(`Demande ${modeLabel} envoyée.`);
+      const flashMsg = data.warning ?? `Demande ${modeLabel} envoyée avec succès.`;
+      setSuccess(flashMsg);
+      if (isClient) {
+        sessionStorage.setItem("expedition_flash", flashMsg);
+        redirectTimer.current = setTimeout(() => {
+          router.push("/mes-expeditions");
+        }, 1500);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -199,11 +252,6 @@ export default function ExpedierUnColisPage() {
         <Reveal>
           <form className="rounded-3xl bg-white/70 ring-1 ring-black/5 shadow-sm p-6 md:p-8 flex flex-col gap-8">
             {error ? <p className="text-sm text-red-700 rounded-xl bg-red-50 px-4 py-3 ring-1 ring-red-200">{error}</p> : null}
-            {success ? (
-              <p className="text-sm text-emerald-800 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200">
-                {success}
-              </p>
-            ) : null}
 
             <FormSection title="Mode de transport">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -360,12 +408,19 @@ export default function ExpedierUnColisPage() {
                     setPhotoDataUrl(null);
                     return;
                   }
-                  const dataUrl = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(String(reader.result || ""));
-                    reader.onerror = () => reject(new Error("READ_ERROR"));
-                    reader.readAsDataURL(file);
-                  }).catch(() => "");
+                  // Compression légère pour éviter l'échec EmailJS (limite variables).
+                  let dataUrl: string | null = null;
+                  try {
+                    dataUrl = await compressImageToJpegDataUrl(file);
+                  } catch {
+                    // Fallback : encodage brut si compression impossible.
+                    dataUrl = await new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader();
+                      reader.onload = () => resolve(String(reader.result || ""));
+                      reader.onerror = () => reject(new Error("READ_ERROR"));
+                      reader.readAsDataURL(file);
+                    }).catch(() => "");
+                  }
                   setPhotoDataUrl(dataUrl || null);
                   setError(null);
                 }}
@@ -390,6 +445,15 @@ export default function ExpedierUnColisPage() {
               >
                 {loading ? "Envoi..." : "Envoyer la demande"}
               </button>
+
+              {success ? (
+                <div className="mt-3 text-sm text-emerald-800 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200">
+                  <p>{success}</p>
+                  {isClient ? (
+                    <p className="mt-2 text-emerald-700">Redirection vers Mes expéditions…</p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </form>
         </Reveal>

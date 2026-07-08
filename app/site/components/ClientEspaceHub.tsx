@@ -10,6 +10,7 @@ type Tab = {
 
 const tabs: Tab[] = [
   { href: "/mes-commandes", title: "Commandes", desc: "Historique, statut, détails et preuve photo." },
+  { href: "/mes-expeditions", title: "Mes expéditions", desc: "Suivez vos demandes d’expédition aérien et maritime." },
   { href: "/mes-avis", title: "Mes avis", desc: "Témoignages laissés après livraison de vos commandes." },
   { href: "/mon-profil", title: "Profil", desc: "Informations personnelles et contacts." },
   { href: "/parametres", title: "Paramètres", desc: "Sécurité, langue, préférences." },
@@ -60,18 +61,6 @@ export function ClientEspaceHub({ session }: { session: Session }) {
             </p>
             <p className="card-cta">
             Voir le panier
-            <span className="card-cta__arrow" aria-hidden="true">→</span>
-          </p>
-          </Link>
-        </Reveal>
-        <Reveal delayMs={80 + (tabs.length + 2) * 70} className="h-full">
-          <Link href="/expedier-un-colis" className="card h-full p-6 focus-ring">
-            <p className="text-sm font-semibold text-gray-900">Expédier un colis</p>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              Créez une demande d&apos;expédition et suivez votre envoi de colis.
-            </p>
-            <p className="card-cta">
-            Ouvrir
             <span className="card-cta__arrow" aria-hidden="true">→</span>
           </p>
           </Link>

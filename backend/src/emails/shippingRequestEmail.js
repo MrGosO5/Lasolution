@@ -1,4 +1,13 @@
-const MAX_INLINE_PHOTO_BYTES = 750 * 1024;
+/**
+ * EmailJS a une limite de taille sur la "variables payload" (en pratique, la string photo_html/base64).
+ * On évite d'embarquer l'aperçu base64 dans l'email dès que la taille estimée dépasse ~40Ko.
+ */
+const MAX_INLINE_PHOTO_BASE64_CHARS = 40 * 1024; // base64 chars, hors overhead HTML
+
+function estimateBase64Chars(byteLength) {
+  // base64 length = ceil(n/3)*4
+  return Math.ceil(byteLength / 3) * 4;
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -31,8 +40,9 @@ function buildPhotoHtml({ photoBuf, photoMime }) {
   }
 
   const sizeKb = Math.round(photoBuf.length / 1024);
-  if (photoBuf.length > MAX_INLINE_PHOTO_BYTES) {
-    return `<p style="margin:0;font-size:14px;line-height:1.55;color:#6b7280;">Photo du colis reçue (<strong>${sizeKb}&nbsp;Ko</strong>). Aperçu non inclus dans l’e-mail (taille). Consultez la pièce jointe SMTP si envoyée, ou le journal d’activité.</p>`;
+  const base64Chars = estimateBase64Chars(photoBuf.length);
+  if (base64Chars > MAX_INLINE_PHOTO_BASE64_CHARS) {
+    return `<p style="margin:0;font-size:14px;line-height:1.55;color:#6b7280;">Photo du colis reçue (<strong>${sizeKb}&nbsp;Ko</strong>). Aperçu non inclus dans l’e-mail (limite EmailJS). Consultez le journal d’activité.</p>`;
   }
 
   const mime = photoMime || "image/jpeg";

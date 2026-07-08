@@ -27,6 +27,7 @@ function SidebarNav({
 
   const isHome =
     isActive("/dashboard") &&
+    !pathname.includes("/expeditions") &&
     !pathname.includes("/utilisateurs") &&
     !pathname.includes("/commandes") &&
     !pathname.includes("/parametres") &&
@@ -65,6 +66,16 @@ function SidebarNav({
           className={pathname.includes("/commandes") ? "text-figma-activeMenuText" : "text-figma-label"}
         />
         <span>Commandes</span>
+      </Link>
+      <Link
+        href="/dashboard/expeditions"
+        className={linkClass(pathname.includes("/expeditions"))}
+        onClick={onNavigate}
+      >
+        <PackageIcon
+          className={pathname.includes("/expeditions") ? "text-figma-activeMenuText" : "text-figma-label"}
+        />
+        <span>Expéditions</span>
       </Link>
       <Link
         href="/dashboard/demandes"

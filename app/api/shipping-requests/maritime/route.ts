@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 function apiBase() {
   return (process.env.INTERNAL_AUTH_API_URL || process.env.AUTH_API_URL || "http://localhost:4000").replace(
@@ -15,9 +17,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
-  const res = await fetch(`${apiBase()}/shipping-requests/maritime`, {
+  const session = await getServerSession(authOptions);
+  const token = session?.user?.accessToken;
+
+  // Si connecté (client), on utilise la route /me pour associer userId à la demande.
+  const url =
+    typeof token === "string" && token
+      ? `${apiBase()}/me/shipping-requests`
+      : `${apiBase()}/shipping-requests/maritime`;
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (typeof token === "string" && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
 
