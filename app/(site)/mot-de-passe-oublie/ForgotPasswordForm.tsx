@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { TextInput } from "@/app/site/components/Form";
 import { TurnstileWidget } from "@/app/site/components/TurnstileWidget";
+import { isTurnstileConfigured } from "@/lib/turnstile-client";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -14,7 +15,7 @@ export function ForgotPasswordForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (showCaptcha && !captchaToken) {
+    if (showCaptcha && isTurnstileConfigured() && !captchaToken) {
       setErrorMessage("Veuillez compléter la vérification anti-robot.");
       return;
     }
@@ -72,7 +73,9 @@ export function ForgotPasswordForm() {
         autoComplete="email"
       />
       {errorMessage ? <p className="mt-3 text-sm text-red-600">{errorMessage}</p> : null}
-      {showCaptcha ? <TurnstileWidget onToken={setCaptchaToken} className="mt-3" /> : null}
+      {showCaptcha && isTurnstileConfigured() ? (
+        <TurnstileWidget onToken={setCaptchaToken} className="mt-3" />
+      ) : null}
       <button
         type="submit"
         disabled={status === "loading"}

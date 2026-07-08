@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Select, TextInput, Toggle } from "@/app/site/components/Form";
 import { TurnstileWidget } from "@/app/site/components/TurnstileWidget";
+import { isTurnstileConfigured } from "@/lib/turnstile-client";
 
 export function InscriptionForm() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export function InscriptionForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!captchaToken) {
+    if (isTurnstileConfigured() && !captchaToken) {
       setStatus("error");
       setErrorMessage("Veuillez compléter la vérification anti-robot.");
       return;
@@ -96,7 +97,9 @@ export function InscriptionForm() {
         />
       </div>
 
-      <TurnstileWidget onToken={setCaptchaToken} className="mt-2 flex justify-center" />
+      {isTurnstileConfigured() ? (
+        <TurnstileWidget onToken={setCaptchaToken} className="mt-2 flex justify-center" />
+      ) : null}
 
       {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
 

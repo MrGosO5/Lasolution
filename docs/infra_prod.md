@@ -55,7 +55,9 @@ mv Lasolution /var/www/lasolution
 cd /var/www/lasolution
 ```
 
-Fichier `.env.local` créé à la racine (`/var/www/lasolution/.env.local`) avec `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `API_JWT_SECRET`, `AUTH_ENV_FALLBACK=false`, `STRIPE_SECRET_KEY`, clés Turnstile, `DATA_ENCRYPTION_KEY`, clés EmailJS, `SITE_PREVIEW_*`.
+Fichier `.env.local` créé à la racine (`/var/www/lasolution/.env.local`) avec `DATABASE_URL`, `REDIS_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `API_JWT_SECRET`, `AUTH_ENV_FALLBACK=false`, `STRIPE_SECRET_KEY`, clés Turnstile (`NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`), `DATA_ENCRYPTION_KEY`, clés EmailJS, `SITE_PREVIEW_*`.
+
+> **Turnstile (CAPTCHA)** : la clé publique `NEXT_PUBLIC_*` est intégrée au build Next.js — après l’ajout ou la modification, relancer `npm run build` puis `pm2 restart lasolution-frontend`. Créer le widget sur [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile) avec le domaine `lasolution.org`.
 
 Installation des dépendances :
 

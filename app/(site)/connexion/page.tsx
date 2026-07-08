@@ -13,6 +13,7 @@ import {
   sanitizeSiteLoginCallback,
 } from "@/lib/site-login-redirect";
 import { TurnstileWidget } from "@/app/site/components/TurnstileWidget";
+import { isTurnstileConfigured } from "@/lib/turnstile-client";
 import type { AppRole } from "@/types/app-role";
 
 export default function ConnexionSitePage() {
@@ -54,7 +55,7 @@ export default function ConnexionSitePage() {
     setLoading(true);
 
     try {
-      if (showCaptcha && !captchaToken) {
+      if (showCaptcha && isTurnstileConfigured() && !captchaToken) {
         setError("Veuillez compléter la vérification anti-robot.");
         setLoading(false);
         return;
@@ -156,7 +157,9 @@ export default function ConnexionSitePage() {
                 />
               ) : null}
 
-              {showCaptcha ? <TurnstileWidget onToken={setCaptchaToken} /> : null}
+              {showCaptcha && isTurnstileConfigured() ? (
+                <TurnstileWidget onToken={setCaptchaToken} />
+              ) : null}
 
               <div className="flex items-center justify-between gap-4">
                 <label className="flex items-center gap-2 text-sm text-gray-700">
