@@ -1,13 +1,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getBackendAccessToken } from "@/lib/backend-access-token";
+import { getServerAuthApiUrl } from "@/lib/auth-api-url";
 
 function apiBaseUrl() {
-  return (
-    process.env.INTERNAL_AUTH_API_URL ||
-    process.env.AUTH_API_URL ||
-    "http://localhost:4000"
-  );
+  return getServerAuthApiUrl();
 }
 
 /**

@@ -3,9 +3,9 @@ import type { AppRole } from "@/types/app-role";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { getNextAuthSecret } from "@/lib/nextauth-secret";
+import { getServerAuthApiUrl } from "@/lib/auth-api-url";
 
-const AUTH_API_URL =
-  process.env.INTERNAL_AUTH_API_URL ?? process.env.AUTH_API_URL ?? "http://localhost:4000";
+const AUTH_API_URL = getServerAuthApiUrl();
 const SESSION_MAX_AGE_LONG = 30 * 24 * 60 * 60;
 const SESSION_MAX_AGE_SHORT = 24 * 60 * 60;
 
@@ -67,7 +67,15 @@ const providers: NextAuthOptions["providers"] = [
           rememberMe: credentials.rememberMe === "true",
         };
       } catch (e) {
-        if (e instanceof Error) throw e;
+        if (e instanceof Error) {
+          const cause = e.cause instanceof Error ? e.cause.message : String(e.cause ?? "");
+          if (e.message === "fetch failed" || cause.includes("ECONNREFUSED") || cause.includes("ENOTFOUND")) {
+            throw new Error(
+              "Impossible de joindre l’API backend. Vérifiez que le service lasolution-backend tourne (pm2 status) et que INTERNAL_AUTH_API_URL=http://127.0.0.1:4000 est défini dans .env.local.",
+            );
+          }
+          throw e;
+        }
         throw new Error("Connexion impossible.");
       }
     },
