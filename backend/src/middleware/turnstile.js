@@ -2,15 +2,15 @@ const https = require("https");
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
+function isTurnstileConfigured() {
+  return Boolean(String(process.env.TURNSTILE_SECRET_KEY || "").trim());
+}
+
 function verifyTurnstileToken(token, remoteip) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      return Promise.resolve({ ok: false, error: "CAPTCHA non configuré." });
-    }
-    // Dev sans clés : accepter si token absent ou "dev-bypass"
-    if (!token || token === "dev-bypass") return Promise.resolve({ ok: true, skipped: true });
-    return Promise.resolve({ ok: false, error: "CAPTCHA non configuré." });
+    console.warn("[turnstile] TURNSTILE_SECRET_KEY absent — vérification ignorée.");
+    return Promise.resolve({ ok: true, skipped: true });
   }
 
   if (!token || typeof token !== "string") {
@@ -78,4 +78,4 @@ async function requireTurnstile(req, res) {
   return true;
 }
 
-module.exports = { verifyTurnstileToken, requireTurnstile };
+module.exports = { verifyTurnstileToken, requireTurnstile, isTurnstileConfigured };

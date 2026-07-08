@@ -17,7 +17,7 @@ const {
   requireAuth,
   normalizeEmail,
 } = require("../middleware/auth");
-const { requireTurnstile } = require("../middleware/turnstile");
+const { requireTurnstile, isTurnstileConfigured } = require("../middleware/turnstile");
 const { sendMail } = require("../emails/mailer");
 const { welcomeEmail, emailVerificationEmail } = require("../emails/templates");
 const { reconcileDemoClientAccount } = require("../auth/normalizeClientAuth");
@@ -161,7 +161,7 @@ function setupAuthRoutes(app, getPrisma, config) {
       return res.status(400).json({ error: "Email et mot de passe requis." });
     }
 
-    if (prisma) {
+    if (prisma && isTurnstileConfigured()) {
       const failCount = await countRecentSecurityEvents(prisma, { email: em, type: "login_fail" });
       if (failCount >= LOGIN_FAIL_CAPTCHA_THRESHOLD) {
         req.body.captchaToken = captchaToken;

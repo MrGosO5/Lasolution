@@ -4,7 +4,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { getNextAuthSecret } from "@/lib/nextauth-secret";
 
-const AUTH_API_URL = process.env.AUTH_API_URL ?? "http://localhost:4000";
+const AUTH_API_URL =
+  process.env.INTERNAL_AUTH_API_URL ?? process.env.AUTH_API_URL ?? "http://localhost:4000";
 const SESSION_MAX_AGE_LONG = 30 * 24 * 60 * 60;
 const SESSION_MAX_AGE_SHORT = 24 * 60 * 60;
 
@@ -35,7 +36,16 @@ const providers: NextAuthOptions["providers"] = [
           }),
         });
 
-        if (!response.ok) return null;
+        if (!response.ok) {
+          let message = "Identifiants invalides.";
+          try {
+            const body = (await response.json()) as { error?: string; code?: string };
+            if (body.error) message = body.error;
+          } catch {
+            /* ignore */
+          }
+          throw new Error(message);
+        }
 
         const user = (await response.json()) as {
           id: string;
@@ -56,8 +66,9 @@ const providers: NextAuthOptions["providers"] = [
           refreshToken: user.refreshToken ?? undefined,
           rememberMe: credentials.rememberMe === "true",
         };
-      } catch {
-        return null;
+      } catch (e) {
+        if (e instanceof Error) throw e;
+        throw new Error("Connexion impossible.");
       }
     },
   }),

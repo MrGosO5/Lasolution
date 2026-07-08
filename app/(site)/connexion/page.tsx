@@ -73,7 +73,11 @@ export default function ConnexionSitePage() {
       if (res?.error || !res?.ok) {
         setShowCaptcha(true);
         setShowMfa(true);
-        setError("Connexion refusée. Vérifiez vos identifiants, le code MFA si requis, ou complétez le CAPTCHA.");
+        const backendMsg = res?.error && res.error !== "CredentialsSignin" ? res.error : null;
+        setError(
+          backendMsg ||
+            "Connexion refusée. Vérifiez vos identifiants, le code MFA si requis, ou complétez le CAPTCHA.",
+        );
         setLoading(false);
         return;
       }
