@@ -6,22 +6,12 @@ import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
 import { MesExpeditionsFlash } from "./MesExpeditionsFlash";
 import { MesExpeditionsTable, type MesExpeditionRow } from "./MesExpeditionsTable";
-
-type ShippingRequestMeta = {
-  transportMode?: string | null;
-  trackingNumber?: string | null;
-  recipientName?: string | null;
-  recipientPhone?: string | null;
-  destinationCountry?: string | null;
-  destinationAddress?: string | null;
-  weightKg?: string | null;
-  notes?: string | null;
-};
+import type { ClientExpeditionMeta } from "@/lib/shipping-expedition-client";
 
 type MeShippingRequestEvent = {
   id: string;
   createdAt: string;
-  meta: ShippingRequestMeta | null;
+  meta: ClientExpeditionMeta | null;
 };
 
 type MeShippingRequestsResponse = { events: MeShippingRequestEvent[] };
@@ -43,6 +33,9 @@ function toRow(ev: MeShippingRequestEvent): MesExpeditionRow {
     recipientPhone: s(meta.recipientPhone),
     weightKg: s(meta.weightKg),
     trackingNumber: s(meta.trackingNumber),
+    status: s(meta.status) || "SUBMITTED",
+    shippedAt: meta.shippedAt ? s(meta.shippedAt) : null,
+    meta,
   };
 }
 
@@ -86,8 +79,7 @@ export default async function MesExpeditionsPage() {
   }
 
   const total = rows.length;
-  const airCount = rows.filter((r) => r.transportMode.toUpperCase() === "AIR").length;
-  const seaCount = rows.filter((r) => r.transportMode.toUpperCase() === "SEA").length;
+  const inProgress = rows.filter((r) => !["DELIVERED", "CANCELLED"].includes(r.status.toUpperCase())).length;
 
   return (
     <main className="site-container site-section">
@@ -95,7 +87,7 @@ export default async function MesExpeditionsPage() {
         <PageHeader
           eyebrow="Client"
           title="Mes expéditions"
-          subtitle="Recherchez et consultez vos demandes d’expédition. Notre équipe vous recontacte pour finaliser l’envoi."
+          subtitle="Suivez l’évolution de vos demandes : statut, messages de l’équipe et numéro de tracking."
           right={
             <Link href="/expedier-un-colis" className="btn btn-ghost">
               Nouvelle demande
@@ -117,12 +109,8 @@ export default async function MesExpeditionsPage() {
                 <p className="text-3xl font-extrabold text-gray-900">{total}</p>
               </div>
               <div className="grid gap-1">
-                <p className="text-sm font-semibold text-gray-900">Aérien</p>
-                <p className="text-3xl font-extrabold text-gray-900">{airCount}</p>
-              </div>
-              <div className="grid gap-1">
-                <p className="text-sm font-semibold text-gray-900">Maritime</p>
-                <p className="text-3xl font-extrabold text-gray-900">{seaCount}</p>
+                <p className="text-sm font-semibold text-gray-900">En cours</p>
+                <p className="text-3xl font-extrabold text-gray-900">{inProgress}</p>
               </div>
             </div>
           </div>
@@ -133,9 +121,6 @@ export default async function MesExpeditionsPage() {
             <div className="card p-6 md:p-7 ring-1 ring-amber-200 bg-amber-50/80">
               <p className="text-sm font-semibold text-amber-950">Chargement impossible</p>
               <p className="mt-2 text-sm text-amber-900 leading-relaxed">{loadError}</p>
-              <p className="mt-2 text-sm text-amber-900">
-                Déconnectez-vous puis reconnectez-vous si le message mentionne un jeton expiré ou absent.
-              </p>
             </div>
           ) : null}
           {!loadError && rows.length === 0 ? (

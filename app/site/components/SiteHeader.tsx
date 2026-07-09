@@ -15,8 +15,8 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-black/5 bg-white/70 backdrop-blur-md">
-      <div className="site-container flex items-center gap-4 py-3 md:gap-8">
-        <Link href="/" className="focus-ring inline-flex shrink-0 items-center rounded-xl py-0.5">
+      <div className="site-container grid grid-cols-[1fr_auto] items-center gap-4 py-3 md:gap-8 lg:grid-cols-[1fr_auto_1fr]">
+        <Link href="/" className="focus-ring inline-flex shrink-0 items-center justify-self-start rounded-xl py-0.5 lg:col-start-1">
           <span className="sr-only">La Solution</span>
           <Logo />
         </Link>

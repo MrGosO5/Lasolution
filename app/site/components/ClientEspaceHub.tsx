@@ -66,6 +66,35 @@ export function ClientEspaceHub({ session }: { session: Session }) {
           </Link>
         </Reveal>
       </div>
+
+      <Reveal delayMs={80 + (tabs.length + 3) * 70}>
+        <div className="mt-8">
+          <p className="text-sm font-semibold text-gray-900">Rejoindre le réseau La Solution</p>
+          <p className="mt-1 text-sm text-gray-600">Proposez vos services en tant que partenaire logistique.</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Link href="/devenir-point-relai" className="card h-full p-6 focus-ring">
+              <p className="text-sm font-semibold text-gray-900">Devenir Point Relai</p>
+              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                Réceptionnez les colis et remettez-les aux clients finaux près de chez vous.
+              </p>
+              <p className="card-cta">
+                En savoir plus
+                <span className="card-cta__arrow" aria-hidden="true">→</span>
+              </p>
+            </Link>
+            <Link href="/devenir-solupacker" className="card h-full p-6 focus-ring">
+              <p className="text-sm font-semibold text-gray-900">Devenir SoluPacker</p>
+              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                Transportez des colis entre l&apos;Europe et l&apos;Afrique lors de vos trajets.
+              </p>
+              <p className="card-cta">
+                En savoir plus
+                <span className="card-cta__arrow" aria-hidden="true">→</span>
+              </p>
+            </Link>
+          </div>
+        </div>
+      </Reveal>
     </>
   );
 }

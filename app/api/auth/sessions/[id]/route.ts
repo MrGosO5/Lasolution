@@ -1,8 +1,9 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { getNextAuthSecret } from "@/lib/nextauth-secret";
+import { getServerAuthApiUrl } from "@/lib/auth-api-url";
 
-const AUTH_API_URL = process.env.AUTH_API_URL ?? process.env.INTERNAL_AUTH_API_URL ?? "http://localhost:4000";
+const AUTH_API_URL = getServerAuthApiUrl();
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

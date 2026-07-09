@@ -6,13 +6,13 @@ import { SiteSignOutButton } from "@/app/site/components/SiteSignOutButton";
 
 type NavItem = { href: string; label: string; match?: "exact" | "prefix" };
 
-const PUBLIC_NAV: NavItem[] = [
-  { href: "/services", label: "Services", match: "prefix" },
-  // Boutiques bientôt disponible — masqué pour le moment
-  { href: "/faq", label: "FAQ", match: "exact" },
-  { href: "/devenir-point-relai", label: "Devenir Point Relai", match: "prefix" },
-  { href: "/devenir-solupacker", label: "Devenir SoluPacker", match: "prefix" },
-];
+function buildMainNav(isClient: boolean): NavItem[] {
+  return [
+    { href: isClient ? "/mon-espace" : "/", label: "Accueil", match: "exact" },
+    { href: "/services", label: "Services", match: "prefix" },
+    { href: "/faq", label: "FAQ", match: "exact" },
+  ];
+}
 
 function isNavActive(pathname: string, href: string, match: NavItem["match"] = "prefix"): boolean {
   if (match === "exact") return pathname === href;
@@ -47,37 +47,40 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
 
   const accountMatch: NavItem["match"] = accountHref === "/dashboard" ? "prefix" : "exact";
 
-  const accueilItem: NavItem = { href: "/mon-espace", label: "Accueil", match: "exact" };
-  const clientExtraNav: NavItem[] = [
-    { href: "/mes-commandes", label: "Mes commandes", match: "prefix" },
-    { href: "/mes-avis", label: "Mes avis", match: "prefix" },
-  ];
-
-  const mainNav: NavItem[] = isClient
-    ? [accueilItem, ...PUBLIC_NAV, ...clientExtraNav]
-    : PUBLIC_NAV;
+  const mainNav = buildMainNav(isClient);
 
   const accountNav: NavItem[] =
     isAuthed && !isClient
       ? [{ href: accountHref, label: accountLabel, match: accountMatch }]
       : [];
 
-  const mobileItems: NavItem[] = isAuthed && !isClient ? [...PUBLIC_NAV, ...accountNav] : mainNav;
+  const mobileItems: NavItem[] = isAuthed && !isClient ? [...mainNav, ...accountNav] : mainNav;
 
   return (
-    <div className="flex flex-1 items-center justify-between gap-4">
-      <nav className="hidden items-center gap-7 lg:flex" aria-label="Navigation principale">
-        {mainNav.map((item) => {
-          const active = isNavActive(pathname, item.href, item.match);
-          return (
-            <Link key={item.href} href={item.href} className={navLinkClass(active)} aria-current={active ? "page" : undefined}>
-              {item.label}
-            </Link>
-          );
-        })}
+    <>
+      <nav
+        className="hidden items-center justify-center gap-7 lg:col-start-2 lg:row-start-1 lg:flex"
+        aria-label="Navigation principale"
+      >
+        <ul className="flex items-center gap-7">
+          {mainNav.map((item) => {
+            const active = isNavActive(pathname, item.href, item.match);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={navLinkClass(active)}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
 
-      <div className="ml-auto flex items-center gap-2 lg:gap-5">
+      <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 justify-self-end lg:col-start-3 lg:gap-5">
         {isAuthed ? (
           <>
             {accountNav.length > 0 ? (
@@ -147,6 +150,6 @@ export function SiteHeaderNav({ isAuthed, isClient, accountHref, accountLabel }:
           </div>
         </details>
       </div>
-    </div>
+    </>
   );
 }

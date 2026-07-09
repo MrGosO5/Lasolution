@@ -1,4 +1,4 @@
-import { SignOutButton } from "@/app/components/SignOutButton";
+import { SiteSignOutButton } from "@/app/site/components/SiteSignOutButton";
 import type { Session } from "next-auth";
 
 export function DashboardHeader({
@@ -51,7 +51,7 @@ export function DashboardHeader({
             <span className="text-xs text-figma-adminSub">Compte administrateur</span>
           </div>
         </div>
-        <SignOutButton />
+        <SiteSignOutButton className="btn btn-primary inline-flex" />
       </div>
     </header>
   );
