@@ -15,6 +15,19 @@ Il part de l'état réel du projet et détaille l'architecture à mettre en plac
 
 **Voir aussi** — passation pour le dev front (seeds, env, routes API, proxies Next, flux réception / poids / expédition) : [`admin-orders-frontend-handoff.md`](./admin-orders-frontend-handoff.md).
 
+**Expéditions standalone** (demandes hors commande, `SecurityEvent` / `shipping_request`) : [`expeditions-standalone.md`](./expeditions-standalone.md) — **UI et API implémentées** (client `/mes-expeditions`, admin `/dashboard/expeditions`).
+
+## Avancement implémenté (expéditions standalone)
+
+| Domaine | Détail |
+|--------|--------|
+| **Client** | `/expedier-un-colis`, `/mes-expeditions` (liste, suivi modale, timeline), hub `ClientEspaceHub` |
+| **Admin** | `/dashboard/expeditions` — modale Gérer : statut, Zoho (stub), date prévue, corrections, communication, étiquette (stub), photo, **suppression avec confirmation** |
+| **Backend** | `shippingRequests.js` + `shippingRequestOps.js` — CRUD admin, `GET /me/shipping-requests`, photos `uploads/shipping-requests/` |
+| **Proxies Next** | `app/api/admin/shipping-requests/**` |
+
+Détail des routes, statuts et limites (stubs Zoho/transporteur) : voir le document dédié.
+
 ## Avancement implémenté (commandes / colis — lot 1)
 
 Les éléments suivants sont **déjà en place** dans le dépôt (backend + Prisma + proxies Next partiels) :
@@ -99,6 +112,9 @@ Les zones importantes sont :
 - `app/dashboard/utilisateurs/UtilisateursTable.tsx`
 - `app/dashboard/demandes/page.tsx`
 - `app/dashboard/demandes/DemandesClient.tsx`
+- `app/dashboard/expeditions/page.tsx`
+- `app/dashboard/expeditions/ExpeditionsTableClient.tsx`
+- `app/dashboard/expeditions/ExpeditionManageModal.tsx`
 
 Le backoffice est déjà protégé par rôle `admin` via le middleware applicatif. Les routes Next sous `app/api/admin/...` servent de proxy sécurisé entre l'interface Next.js et l'API Express.
 

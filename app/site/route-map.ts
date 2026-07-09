@@ -130,6 +130,13 @@ export const SITE_ROUTES: SiteRoute[] = [
     path: "/expedier-un-colis",
     title: "Expédition de colis",
     pdfScreens: ["Expédition de colis"],
+    notes: "POST /shipping-requests/* ou /me/shipping-requests (client connecté). Photo obligatoire.",
+  },
+  {
+    path: "/mes-expeditions",
+    title: "Mes expéditions (client)",
+    pdfScreens: ["Liste demandes", "Modale suivi / timeline"],
+    notes: "GET /me/shipping-requests. Suivi : statut, date prévue, communications, tracking. Connexion client requise.",
   },
   {
     path: "/notifications",

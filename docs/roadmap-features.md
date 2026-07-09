@@ -36,6 +36,7 @@
 - ✅ Mes avis `/mes-avis`
 - ✅ Notifications `/notifications`
 - ✅ Expédier un colis `/expedier-un-colis`
+- ✅ Mes expéditions `/mes-expeditions` (liste, recherche, modale suivi / timeline)
 - 🟡 Carte virtuelle `/carte` (UI seule)
 
 ---
@@ -81,6 +82,7 @@
 - ✅ Colis : réception entrepôt, pesée, expédition, événements suivi
 - ✅ Utilisateurs : liste clients, SoluPackers, Points Relais
 - ✅ Demandes : candidatures SoluPacker + Point Relai (voir docs, accepter, refuser)
+- ✅ Expéditions standalone `/dashboard/expeditions` (liste, modale gestion, suppression) — voir [`expeditions-standalone.md`](./expeditions-standalone.md)
 - ✅ Avis : modération (approuver / rejeter)
 - 🟡 Paramètres admin (UI seule)
 
@@ -107,5 +109,6 @@
 
 ## Docs
 
+- [`expeditions-standalone.md`](./expeditions-standalone.md) — demandes d’expédition hors commande (client + admin)
 - [`phased-delivery.md`](./phased-delivery.md) — backlog phases
 - [`infra_prod.md`](./infra_prod.md) — déploiement prod
