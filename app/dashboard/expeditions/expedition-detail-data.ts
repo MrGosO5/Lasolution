@@ -1,13 +1,12 @@
-export type ShippingStatus =
-  | "SUBMITTED"
-  | "IN_REVIEW"
-  | "QUOTED"
-  | "INVOICE_DRAFT"
-  | "INVOICE_APPROVED"
-  | "READY_TO_SHIP"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+import {
+  CLIENT_STATUS_LABELS,
+  DEFAULT_SHIPPING_STATUS,
+  LEGACY_CLIENT_STATUS_LABELS,
+  type ClientShippingStatus,
+} from "@/lib/shipping-expedition-client";
+
+export { DEFAULT_SHIPPING_STATUS };
+export type ShippingStatus = ClientShippingStatus;
 
 export type ShippingCommunication = {
   id: string;
@@ -58,20 +57,36 @@ export type ExpeditionDetailData = {
 };
 
 export const SHIPPING_STATUS_OPTIONS: { value: ShippingStatus; label: string }[] = [
-  { value: "SUBMITTED", label: "Soumise" },
-  { value: "IN_REVIEW", label: "En examen" },
-  { value: "QUOTED", label: "Devis envoyé" },
-  { value: "INVOICE_DRAFT", label: "Facture brouillon Zoho" },
-  { value: "INVOICE_APPROVED", label: "Facture validée" },
-  { value: "READY_TO_SHIP", label: "Prête à expédier" },
-  { value: "SHIPPED", label: "Expédiée" },
-  { value: "DELIVERED", label: "Livrée" },
-  { value: "CANCELLED", label: "Annulée" },
+  { value: "AWAITING_RECEPTION", label: "En attente de réception" },
+  { value: "RECEIVED_AT_WAREHOUSE", label: "Reçu à l'entrepôt" },
+  { value: "IN_TRANSIT", label: "En transit" },
+  { value: "AVAILABLE_FOR_PICKUP", label: "Disponible pour récupération" },
+  { value: "CANCELLED", label: "Annulé" },
+  { value: "DELIVERED", label: "Livré" },
+  { value: "WRONG_DELIVERY", label: "Livraison erronée" },
+  { value: "DELAYED", label: "Colis retardé" },
+  { value: "RECEIVED_COTONOU", label: "Reçu à Cotonou" },
+  { value: "RECEIVED_LIBREVILLE", label: "Reçu à Libreville" },
+  { value: "RECEIVED_LOME", label: "Reçu à Lomé" },
 ];
 
 export function statusLabel(status: string | null | undefined): string {
-  const found = SHIPPING_STATUS_OPTIONS.find((o) => o.value === (status || "SUBMITTED"));
-  return found?.label || status || "Soumise";
+  const key = String(status || DEFAULT_SHIPPING_STATUS).toUpperCase();
+  return (
+    CLIENT_STATUS_LABELS[key] ||
+    LEGACY_CLIENT_STATUS_LABELS[key] ||
+    status ||
+    CLIENT_STATUS_LABELS[DEFAULT_SHIPPING_STATUS]
+  );
+}
+
+/** Options du select admin : inclut un statut historique s'il n'est plus dans la liste officielle. */
+export function statusSelectOptions(currentStatus?: string | null) {
+  const cur = String(currentStatus || "").toUpperCase();
+  if (cur && !SHIPPING_STATUS_OPTIONS.some((o) => o.value === cur)) {
+    return [{ value: cur as ShippingStatus, label: `${statusLabel(cur)} (ancien)` }, ...SHIPPING_STATUS_OPTIONS];
+  }
+  return SHIPPING_STATUS_OPTIONS;
 }
 
 export function formatTransport(mode: unknown): string {
@@ -96,7 +111,7 @@ export function mapListEventToDetail(ev: {
     createdAt: ev.createdAt,
     meta: {
       ...meta,
-      status: (meta.status as ShippingStatus) || "SUBMITTED",
+      status: (meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS,
     },
   };
 }
@@ -121,7 +136,7 @@ export function mapApiToExpeditionDetail(raw: {
     createdAt: ev.createdAt,
     meta: {
       ...meta,
-      status: (meta.status as ShippingStatus) || "SUBMITTED",
+      status: (meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS,
     },
   };
 }

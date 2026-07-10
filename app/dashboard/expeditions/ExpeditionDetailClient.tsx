@@ -4,7 +4,8 @@ import * as React from "react";
 import {
   formatTransport,
   statusLabel,
-  SHIPPING_STATUS_OPTIONS,
+  statusSelectOptions,
+  DEFAULT_SHIPPING_STATUS,
   mapApiToExpeditionDetail,
   type ExpeditionDetailData,
   type ShippingStatus,
@@ -45,7 +46,9 @@ export function ExpeditionDetailClient({
   onDeleted?: (id: string) => void;
 }) {
   const [data, setData] = React.useState(initialData);
-  const [status, setStatus] = React.useState<ShippingStatus>((data.meta.status as ShippingStatus) || "SUBMITTED");
+  const [status, setStatus] = React.useState<ShippingStatus>(
+    (data.meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS,
+  );
   const [shippedAt, setShippedAt] = React.useState(() => {
     if (!data.meta.shippedAt) return "";
     try {
@@ -66,7 +69,7 @@ export function ExpeditionDetailClient({
 
   React.useEffect(() => {
     setData(initialData);
-    setStatus((initialData.meta.status as ShippingStatus) || "SUBMITTED");
+    setStatus((initialData.meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS);
     setEditForm(Object.fromEntries(EDIT_FIELDS.map((f) => [f.key, String(initialData.meta[f.key] ?? "")])));
   }, [initialData]);
 
@@ -89,7 +92,7 @@ export function ExpeditionDetailClient({
     if (json.event) {
       const next = mapApiToExpeditionDetail({ event: json.event, clientEmail: json.clientEmail });
       applyData(next);
-      setStatus((next.meta.status as ShippingStatus) || "SUBMITTED");
+      setStatus((next.meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS);
       setEditForm(Object.fromEntries(EDIT_FIELDS.map((f) => [f.key, String(next.meta[f.key] ?? "")])));
       if (next.meta.shippedAt) {
         try {
@@ -116,7 +119,7 @@ export function ExpeditionDetailClient({
       if (json.event) {
         const next = mapApiToExpeditionDetail({ event: json.event, clientEmail: data.clientEmail });
         applyData(next);
-        setStatus((next.meta.status as ShippingStatus) || "SUBMITTED");
+        setStatus((next.meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS);
       } else {
         try {
           await refresh();
@@ -187,27 +190,6 @@ export function ExpeditionDetailClient({
     }
   }
 
-  async function generateLabel() {
-    setError(null);
-    setSuccess(null);
-    setLoading("Génération étiquette");
-    try {
-      const res = await fetch(`/api/admin/shipping-requests/${encodeURIComponent(id)}/label`, { method: "POST" });
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
-      try {
-        await refresh();
-      } catch {
-        /* ignore */
-      }
-      setSuccess("Étiquette générée.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setLoading(null);
-    }
-  }
-
   async function deleteRequest() {
     setError(null);
     setSuccess(null);
@@ -251,7 +233,7 @@ export function ExpeditionDetailClient({
               onChange={(e) => setStatus(e.target.value as ShippingStatus)}
               className="rounded-lg border border-figma-tableBorder px-3 py-2 text-sm"
             >
-              {SHIPPING_STATUS_OPTIONS.map((o) => (
+              {statusSelectOptions(data.meta.status).map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -376,37 +358,6 @@ export function ExpeditionDetailClient({
         >
           Envoyer
         </button>
-      </section>
-
-      <section className="border border-figma-tableBorder rounded-card bg-white p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h2 className="text-sm font-semibold text-figma-headerTitle">Étiquette</h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!!loading}
-              onClick={() => void generateLabel()}
-              className="rounded-lg border border-figma-tableBorder px-3 py-2 text-xs font-medium hover:bg-figma-tableHeader disabled:opacity-50"
-            >
-              Générer
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="rounded-lg bg-figma-headerTitle text-white px-3 py-2 text-xs font-medium"
-            >
-              Imprimer
-            </button>
-          </div>
-        </div>
-        <div className="rounded-lg border border-dashed border-figma-tableBorder p-4 bg-figma-tableHeader/30 text-sm">
-          <p className="font-bold">{data.meta.recipientName || "Destinataire"}</p>
-          <p>{data.meta.destinationAddress}</p>
-          <p>{data.meta.destinationCountry}</p>
-          <p className="mt-2 font-mono text-xs">
-            {data.meta.labelTrackingNumber || data.meta.trackingNumber || "—"}
-          </p>
-        </div>
       </section>
 
       {data.meta.photoPath || data.meta.photoBytes ? (

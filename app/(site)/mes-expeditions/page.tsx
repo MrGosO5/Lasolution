@@ -6,12 +6,14 @@ import { Reveal } from "@/app/site/components/Reveal";
 import { PageHeader } from "@/app/site/components/UI";
 import { MesExpeditionsFlash } from "./MesExpeditionsFlash";
 import { MesExpeditionsTable, type MesExpeditionRow } from "./MesExpeditionsTable";
-import type { ClientExpeditionMeta } from "@/lib/shipping-expedition-client";
+import { DEFAULT_SHIPPING_STATUS, type ClientExpeditionMeta } from "@/lib/shipping-expedition-client";
+import type { OrderTestimonialData } from "@/app/site/components/OrderTestimonialBlock";
 
 type MeShippingRequestEvent = {
   id: string;
   createdAt: string;
   meta: ClientExpeditionMeta | null;
+  testimonial?: OrderTestimonialData | null;
 };
 
 type MeShippingRequestsResponse = { events: MeShippingRequestEvent[] };
@@ -33,9 +35,10 @@ function toRow(ev: MeShippingRequestEvent): MesExpeditionRow {
     recipientPhone: s(meta.recipientPhone),
     weightKg: s(meta.weightKg),
     trackingNumber: s(meta.trackingNumber),
-    status: s(meta.status) || "SUBMITTED",
+    status: s(meta.status) || DEFAULT_SHIPPING_STATUS,
     shippedAt: meta.shippedAt ? s(meta.shippedAt) : null,
     meta,
+    testimonial: ev.testimonial ?? null,
   };
 }
 

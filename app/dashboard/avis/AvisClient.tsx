@@ -8,7 +8,8 @@ import { testimonialPhotoUrl } from "@/lib/testimonial-media";
 
 export type AdminTestimonialRow = {
   id: string;
-  orderId: string;
+  orderId?: string | null;
+  shippingRequestId?: string | null;
   clientName: string;
   city: string;
   country: string;
@@ -159,12 +160,23 @@ export function AvisClient({
                     </Td>
                     <Td>{row.rating != null ? `${row.rating}/5` : "—"}</Td>
                     <Td>
-                      <Link
-                        href={`/dashboard/commandes/${row.orderId}`}
-                        className="text-figma-activeMenuText hover:underline text-xs font-mono"
-                      >
-                        #{row.orderId.slice(0, 8)}
-                      </Link>
+                      {row.shippingRequestId ? (
+                        <Link
+                          href={`/dashboard/expeditions?highlight=${encodeURIComponent(row.shippingRequestId)}`}
+                          className="text-figma-activeMenuText hover:underline text-xs font-mono"
+                        >
+                          Exp. #{row.shippingRequestId.slice(0, 8)}
+                        </Link>
+                      ) : row.orderId ? (
+                        <Link
+                          href={`/dashboard/commandes/${row.orderId}`}
+                          className="text-figma-activeMenuText hover:underline text-xs font-mono"
+                        >
+                          #{row.orderId.slice(0, 8)}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
                     </Td>
                     <Td>{new Date(row.createdAt).toLocaleDateString("fr-FR")}</Td>
                     <Td>
@@ -309,12 +321,21 @@ export function AvisClient({
                   Refuser
                 </button>
               ) : null}
-              <Link
-                href={`/dashboard/commandes/${selected.orderId}`}
-                className="px-4 py-2 rounded-lg border border-figma-tableBorder text-sm font-medium text-figma-headerTitle hover:bg-figma-tableRowHover"
-              >
-                Voir la commande
-              </Link>
+              {selected.shippingRequestId ? (
+                <Link
+                  href={`/dashboard/expeditions?highlight=${encodeURIComponent(selected.shippingRequestId)}`}
+                  className="px-4 py-2 rounded-lg border border-figma-tableBorder text-sm font-medium text-figma-headerTitle hover:bg-figma-tableRowHover"
+                >
+                  Voir l&apos;expédition
+                </Link>
+              ) : selected.orderId ? (
+                <Link
+                  href={`/dashboard/commandes/${selected.orderId}`}
+                  className="px-4 py-2 rounded-lg border border-figma-tableBorder text-sm font-medium text-figma-headerTitle hover:bg-figma-tableRowHover"
+                >
+                  Voir la commande
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

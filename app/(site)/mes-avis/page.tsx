@@ -8,7 +8,8 @@ import type { TestimonialStatus } from "@/lib/testimonial-client";
 
 export type MesAvisRow = {
   id: string;
-  orderId: string;
+  orderId?: string | null;
+  shippingRequestId?: string | null;
   clientName: string;
   city: string;
   country: string;
@@ -30,6 +31,16 @@ function Stars({ rating }: { rating: number | null }) {
       <span className="text-gray-300">{"★".repeat(5 - rating)}</span>
     </p>
   );
+}
+
+function sourceLabel(t: MesAvisRow) {
+  if (t.shippingRequestId) {
+    return `Expédition #${t.shippingRequestId.slice(0, 8)}`;
+  }
+  if (t.orderId) {
+    return `Commande #${t.orderId.slice(0, 8)}`;
+  }
+  return "Avis";
 }
 
 export default async function MesAvisPage() {
@@ -60,11 +71,16 @@ export default async function MesAvisPage() {
         <PageHeader
           eyebrow="Client"
           title="Mes avis"
-          subtitle="Consultez vos témoignages et retrouvez la commande associée pour en déposer un nouveau après livraison."
+          subtitle="Consultez vos témoignages laissés après livraison d'une commande ou d'une expédition."
           right={
-            <Link href="/mes-commandes" className="btn btn-ghost">
-              Mes commandes
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/mes-expeditions" className="btn btn-ghost">
+                Mes expéditions
+              </Link>
+              <Link href="/mes-commandes" className="btn btn-ghost">
+                Mes commandes
+              </Link>
+            </div>
           }
         />
       </Reveal>
@@ -86,19 +102,29 @@ export default async function MesAvisPage() {
             <div className="card p-6 md:p-7">
               <p className="text-sm font-semibold text-gray-900">Vous n&apos;avez pas encore laissé d&apos;avis</p>
               <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                Une fois une commande livrée, ouvrez son détail depuis « Mes commandes » pour partager votre
-                expérience.
+                Une fois une commande ou une expédition livrée, ouvrez son suivi pour partager votre expérience.
               </p>
-              <Link href="/mes-commandes" className="btn btn-primary mt-4 inline-flex">
-                Voir mes commandes
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/mes-expeditions" className="btn btn-primary inline-flex">
+                  Voir mes expéditions
+                </Link>
+                <Link href="/mes-commandes" className="btn btn-ghost inline-flex">
+                  Voir mes commandes
+                </Link>
+              </div>
             </div>
           </Reveal>
         ) : !loadError ? (
           rows.map((t, idx) => {
             const photo = testimonialPhotoUrl(t.photoUrl);
             const location = [t.city, t.country].filter(Boolean).join(", ");
-            const orderRef = t.orderId.slice(0, 8);
+            const isShipping = Boolean(t.shippingRequestId);
+            const resourceId = isShipping ? t.shippingRequestId! : t.orderId!;
+            const detailHref = isShipping ? "/mes-expeditions" : `/mes-commandes/${resourceId}`;
+            const editHref = isShipping ? "/mes-expeditions" : `/mes-commandes/${resourceId}#avis`;
+            const detailLabel = isShipping ? "Voir l'expédition" : "Voir la commande";
+            const editLabel = isShipping ? "Modifier depuis Mes expéditions" : "Modifier";
+
             return (
               <Reveal key={t.id} delayMs={60 * idx}>
                 <article className="card p-6 md:p-7">
@@ -120,17 +146,17 @@ export default async function MesAvisPage() {
                         <h2 className="text-base font-semibold text-gray-900">{t.clientName}</h2>
                         <p className="mt-1 text-sm text-gray-500">{location}</p>
                         <p className="mt-1 text-xs text-gray-500">
-                          Commande #{orderRef} · {new Date(t.createdAt).toLocaleDateString("fr-FR")}
+                          {sourceLabel(t)} · {new Date(t.createdAt).toLocaleDateString("fr-FR")}
                         </p>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 shrink-0">
-                      <Link href={`/mes-commandes/${t.orderId}`} className="btn btn-ghost text-sm">
-                        Voir la commande
+                      <Link href={detailHref} className="btn btn-ghost text-sm">
+                        {detailLabel}
                       </Link>
                       {t.status !== "APPROVED" ? (
-                        <Link href={`/mes-commandes/${t.orderId}#avis`} className="btn btn-dark text-sm">
-                          Modifier
+                        <Link href={editHref} className="btn btn-dark text-sm">
+                          {editLabel}
                         </Link>
                       ) : null}
                     </div>

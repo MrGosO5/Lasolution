@@ -174,30 +174,33 @@ model Order {
   testimonial        OrderTestimonial?
 }
 
-/// Avis / témoignage client après livraison (1 par commande).
+/// Avis / témoignage client après livraison (1 par commande ou 1 par demande d'expédition).
 model OrderTestimonial {
-  id           String            @id @default(cuid())
-  orderId      String            @unique
-  order        Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientName   String
-  city         String
-  country      String
-  message      String            @db.Text
-  rating       Int?
-  photoUrl     String?
-  status       TestimonialStatus @default(PENDING)
-  isDemo       Boolean           @default(false)
-  rejectReason String?           @db.Text
-  reviewedAt   DateTime?
-  reviewedBy   String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id                String            @id @default(cuid())
+  orderId           String?           @unique
+  order             Order?            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Référence `SecurityEvent.id` (`type: shipping_request`).
+  shippingRequestId String?           @unique
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientName        String
+  city              String
+  country           String
+  message           String            @db.Text
+  rating            Int?
+  photoUrl          String?
+  status            TestimonialStatus @default(PENDING)
+  isDemo            Boolean           @default(false)
+  rejectReason      String?           @db.Text
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([userId])
   @@index([status, createdAt])
   @@index([status, isDemo])
+  @@index([shippingRequestId])
 }
 
 model OrderLine {

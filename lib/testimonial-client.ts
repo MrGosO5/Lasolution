@@ -23,3 +23,8 @@ export function isOrderDelivered(order: {
   if (parcels.length === 0) return false;
   return parcels.every((p) => String(p.status || "").toUpperCase() === "DELIVERED");
 }
+
+/** Expédition standalone considérée livrée (aligné backend). */
+export function isExpeditionDelivered(status?: string | null): boolean {
+  return String(status || "").toUpperCase() === "DELIVERED";
+}

@@ -4,28 +4,49 @@ const { createDraftInvoice, approveInvoice } = require("../integrations/zohoBook
 const { CarrierAdapter } = require("../carriers/adapter");
 
 const SHIPPING_STATUSES = [
-  "SUBMITTED",
-  "IN_REVIEW",
-  "QUOTED",
-  "INVOICE_DRAFT",
-  "INVOICE_APPROVED",
-  "READY_TO_SHIP",
-  "SHIPPED",
-  "DELIVERED",
+  "AWAITING_RECEPTION",
+  "RECEIVED_AT_WAREHOUSE",
+  "IN_TRANSIT",
+  "AVAILABLE_FOR_PICKUP",
   "CANCELLED",
+  "DELIVERED",
+  "WRONG_DELIVERY",
+  "DELAYED",
+  "RECEIVED_COTONOU",
+  "RECEIVED_LIBREVILLE",
+  "RECEIVED_LOME",
 ];
 
 const STATUS_LABELS_FR = {
-  SUBMITTED: "Soumise",
-  IN_REVIEW: "En examen",
-  QUOTED: "Devis envoyé",
-  INVOICE_DRAFT: "Facture brouillon",
-  INVOICE_APPROVED: "Facture validée",
-  READY_TO_SHIP: "Prête à expédier",
-  SHIPPED: "Expédiée",
-  DELIVERED: "Livrée",
-  CANCELLED: "Annulée",
+  AWAITING_RECEPTION: "En attente de réception",
+  RECEIVED_AT_WAREHOUSE: "Reçu à l'entrepôt",
+  IN_TRANSIT: "En transit",
+  AVAILABLE_FOR_PICKUP: "Disponible pour récupération",
+  CANCELLED: "Annulé",
+  DELIVERED: "Livré",
+  WRONG_DELIVERY: "Livraison erronée",
+  DELAYED: "Colis retardé",
+  RECEIVED_COTONOU: "Reçu à Cotonou",
+  RECEIVED_LIBREVILLE: "Reçu à Libreville",
+  RECEIVED_LOME: "Reçu à Lomé",
 };
+
+/** Anciens codes (affichage uniquement pour données historiques). */
+const LEGACY_STATUS_LABELS_FR = {
+  SUBMITTED: "En attente de réception",
+  IN_REVIEW: "En attente de réception",
+  QUOTED: "En attente de réception",
+  INVOICE_DRAFT: "En attente de réception",
+  INVOICE_APPROVED: "En attente de réception",
+  READY_TO_SHIP: "Reçu à l'entrepôt",
+  SHIPPED: "En transit",
+  OUT_FOR_DELIVERY: "En transit",
+};
+
+function statusLabelFr(s) {
+  const key = String(s || "").toUpperCase();
+  return STATUS_LABELS_FR[key] || LEGACY_STATUS_LABELS_FR[key] || key || STATUS_LABELS_FR.AWAITING_RECEPTION;
+}
 
 const EDITABLE_META_KEYS = [
   "transportMode",
@@ -88,10 +109,10 @@ function pushStatusHistory(existing, status, at = new Date().toISOString()) {
 function defaultOpsMeta() {
   const at = new Date().toISOString();
   return {
-    status: "SUBMITTED",
+    status: "AWAITING_RECEPTION",
     updatedAt: at,
     communications: [],
-    statusHistory: [{ status: "SUBMITTED", at }],
+    statusHistory: [{ status: "AWAITING_RECEPTION", at }],
   };
 }
 
@@ -127,7 +148,7 @@ function mergeEditableMeta(existing, patch) {
   }
   if (patch.status !== undefined && isValidStatus(patch.status)) {
     const nextStatus = String(patch.status).toUpperCase();
-    const prevStatus = String(existing?.status || "SUBMITTED").toUpperCase();
+    const prevStatus = String(existing?.status || "AWAITING_RECEPTION").toUpperCase();
     if (nextStatus !== prevStatus) {
       next.statusHistory = pushStatusHistory(existing, nextStatus);
     }
@@ -201,7 +222,7 @@ function appendCommunication(meta, entry) {
 
 function sanitizeMetaForClient(meta) {
   if (!meta || typeof meta !== "object") {
-    return { status: "SUBMITTED", communications: [], statusHistory: [] };
+    return { status: "AWAITING_RECEPTION", communications: [], statusHistory: [] };
   }
   const m = meta;
   const communications = Array.isArray(m.communications)
@@ -224,7 +245,7 @@ function sanitizeMetaForClient(meta) {
     destinationAddress: m.destinationAddress ?? null,
     weightKg: m.weightKg ?? null,
     notes: m.notes ?? null,
-    status: m.status || "SUBMITTED",
+    status: m.status || "AWAITING_RECEPTION",
     shippedAt: m.shippedAt ?? null,
     updatedAt: m.updatedAt ?? null,
     statusHistory: Array.isArray(m.statusHistory) ? m.statusHistory : [],
@@ -235,6 +256,8 @@ function sanitizeMetaForClient(meta) {
 module.exports = {
   SHIPPING_STATUSES,
   STATUS_LABELS_FR,
+  LEGACY_STATUS_LABELS_FR,
+  statusLabelFr,
   EDITABLE_META_KEYS,
   isValidStatus,
   saveShippingPhoto,

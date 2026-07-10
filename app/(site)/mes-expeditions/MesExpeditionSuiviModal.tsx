@@ -9,6 +9,8 @@ import {
   shippedAtClientLabel,
   statusTone,
 } from "@/lib/shipping-expedition-client";
+import { isExpeditionDelivered } from "@/lib/testimonial-client";
+import { OrderTestimonialBlock, type OrderTestimonialData } from "@/app/site/components/OrderTestimonialBlock";
 import type { MesExpeditionRow } from "./MesExpeditionsTable";
 
 export function MesExpeditionSuiviModal({ row, onClose }: { row: MesExpeditionRow; onClose: () => void }) {
@@ -144,6 +146,12 @@ export function MesExpeditionSuiviModal({ row, onClose }: { row: MesExpeditionRo
               ))}
             </ol>
           </div>
+
+          <OrderTestimonialBlock
+            shippingRequestId={row.id}
+            expeditionDelivered={isExpeditionDelivered(row.status)}
+            testimonial={(row.testimonial as OrderTestimonialData | null) ?? null}
+          />
         </div>
       </div>
     </div>,

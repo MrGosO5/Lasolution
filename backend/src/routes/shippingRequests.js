@@ -227,11 +227,34 @@ function setupShippingRequestRoutes(app, getPrisma) {
       select: { id: true, createdAt: true, meta: true },
     });
 
+    const eventIds = events.map((ev) => ev.id);
+    const testimonials =
+      eventIds.length === 0
+        ? []
+        : await prisma.orderTestimonial.findMany({
+            where: { shippingRequestId: { in: eventIds }, userId: req.auth.sub },
+            select: {
+              shippingRequestId: true,
+              id: true,
+              clientName: true,
+              city: true,
+              country: true,
+              message: true,
+              rating: true,
+              photoUrl: true,
+              status: true,
+              rejectReason: true,
+              createdAt: true,
+            },
+          });
+    const testimonialByRequestId = new Map(testimonials.map((t) => [t.shippingRequestId, t]));
+
     res.json({
       events: events.map((ev) => ({
         id: ev.id,
         createdAt: ev.createdAt,
         meta: sanitizeMetaForClient(ev.meta),
+        testimonial: testimonialByRequestId.get(ev.id) || null,
       })),
     });
   });

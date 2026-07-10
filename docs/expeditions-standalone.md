@@ -130,17 +130,23 @@ Chaque changement de statut alimente `meta.statusHistory` (visible côté client
 
 ## Statuts (`meta.status`)
 
-| Code | Libellé admin | Libellé client |
-| --- | --- | --- |
-| `SUBMITTED` | Soumise | Demande reçue |
-| `IN_REVIEW` | En examen | En cours de traitement |
-| `QUOTED` | Devis envoyé | Devis envoyé |
-| `INVOICE_DRAFT` | Facture brouillon | Facturation en cours |
-| `INVOICE_APPROVED` | Facture validée | Facture validée |
-| `READY_TO_SHIP` | Prête à expédier | Prête à expédier |
-| `SHIPPED` | Expédiée | Expédiée |
-| `DELIVERED` | Livrée | Livrée |
-| `CANCELLED` | Annulée | Annulée |
+Statut initial à la création : **`AWAITING_RECEPTION`** (En attente de réception).
+
+| Code | Libellé admin / client |
+| --- | --- |
+| `AWAITING_RECEPTION` | En attente de réception |
+| `RECEIVED_AT_WAREHOUSE` | Reçu à l'entrepôt |
+| `IN_TRANSIT` | En transit |
+| `AVAILABLE_FOR_PICKUP` | Disponible pour récupération |
+| `CANCELLED` | Annulé |
+| `DELIVERED` | Livré — **déclenche la possibilité de laisser un avis client** |
+| `WRONG_DELIVERY` | Livraison erronée |
+| `DELAYED` | Colis retardé |
+| `RECEIVED_COTONOU` | Reçu à Cotonou |
+| `RECEIVED_LIBREVILLE` | Reçu à Libreville |
+| `RECEIVED_LOME` | Reçu à Lomé |
+
+Les anciens codes (`SUBMITTED`, `SHIPPED`, etc.) restent lisibles dans l'historique ; l'admin peut les remplacer par un statut de la liste ci-dessus.
 
 ---
 
@@ -158,8 +164,24 @@ Chaque changement de statut alimente `meta.statusHistory` (visible côté client
 | --- | --- |
 | Zoho Books (`createDraftInvoice`, `approveInvoice`) | Stub — IDs factices, workflow UI OK |
 | Transporteur (`CarrierAdapter`, `generateLabelForMeta`) | Stub — tracking / URL étiquette générés |
+| Étiquette PDF | Générée côté client (`app/dashboard/expeditions/expedition-label.ts`) — bouton **« Étiquette PDF »** dans la liste admin (pas dans le modal Gérer) |
 | Email communication admin | Enregistré en base ; envoi SMTP si `SMTP_HOST` configuré |
 | EmailJS soumission formulaire | Selon variables d’environnement |
+
+---
+
+## Avis client (après livraison)
+
+Lorsque le statut passe à **`DELIVERED`**, le client peut laisser **un seul avis** par expédition (même modèle que les commandes : modération admin, publication sur le site).
+
+| Élément | Détail |
+| --- | --- |
+| Déclencheur | `meta.status === "DELIVERED"` |
+| UI client | Modal **Suivi** sur `/mes-expeditions` (`OrderTestimonialBlock`) |
+| API | `POST/PATCH /me/shipping-requests/:id/testimonials` |
+| Stockage | Table `OrderTestimonial` avec `shippingRequestId` (nullable `orderId`) |
+| Liste client | `/mes-avis` (commandes + expéditions) |
+| Modération | `/dashboard/avis` (inchangé) |
 
 ---
 

@@ -28,21 +28,56 @@ function apiBase() {
   return (process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:4000").replace(/\/$/, "");
 }
 
-function dismissKey(orderId: string) {
-  return `lasolution_testimonial_dismiss_${orderId}`;
+function dismissKey(kind: "order" | "shipping", resourceId: string) {
+  return `lasolution_testimonial_dismiss_${kind}_${resourceId}`;
 }
 
-function autoShownKey(orderId: string) {
-  return `lasolution_testimonial_autoshown_${orderId}`;
+function autoShownKey(kind: "order" | "shipping", resourceId: string) {
+  return `lasolution_testimonial_autoshown_${kind}_${resourceId}`;
 }
 
-type Props = {
-  orderId: string;
-  orderDelivered: boolean;
-  testimonial: OrderTestimonialData | null;
-};
+type Props =
+  | {
+      orderId: string;
+      orderDelivered: boolean;
+      testimonial: OrderTestimonialData | null;
+    }
+  | {
+      shippingRequestId: string;
+      expeditionDelivered: boolean;
+      testimonial: OrderTestimonialData | null;
+    };
 
-export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: Props) {
+function resolveProps(props: Props) {
+  if ("shippingRequestId" in props) {
+    return {
+      kind: "shipping" as const,
+      resourceId: props.shippingRequestId,
+      delivered: props.expeditionDelivered,
+      testimonial: props.testimonial,
+      createLabel: "Votre expédition est livrée. Un avis nous aide à améliorer le service.",
+      formHint: "Partagez votre expérience (champs marqués * sont obligatoires). Un seul avis par expédition.",
+    };
+  }
+  return {
+    kind: "order" as const,
+    resourceId: props.orderId,
+    delivered: props.orderDelivered,
+    testimonial: props.testimonial,
+    createLabel: "Votre commande est livrée. Un avis nous aide à améliorer le service.",
+    formHint: "Partagez votre expérience (champs marqués * sont obligatoires). Un seul avis par commande.",
+  };
+}
+
+function testimonialApiPath(kind: "order" | "shipping", resourceId: string) {
+  if (kind === "shipping") {
+    return `${apiBase()}/me/shipping-requests/${encodeURIComponent(resourceId)}/testimonials`;
+  }
+  return `${apiBase()}/orders/${encodeURIComponent(resourceId)}/testimonials`;
+}
+
+export function OrderTestimonialBlock(props: Props) {
+  const { kind, resourceId, delivered, testimonial, createLabel, formHint } = resolveProps(props);
   const router = useRouter();
   const { data: session, status, update } = useSession();
   const [open, setOpen] = useState(false);
@@ -55,13 +90,18 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
   const [removePhoto, setRemovePhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [localTestimonial, setLocalTestimonial] = useState<OrderTestimonialData | null>(testimonial);
+
+  useEffect(() => {
+    setLocalTestimonial(testimonial);
+  }, [testimonial]);
 
   const isClient = session?.user?.role === "client";
   const accessToken = session?.user?.accessToken;
-  const isEdit = Boolean(testimonial);
-  const canEdit = testimonial && testimonial.status !== "APPROVED";
+  const isEdit = Boolean(localTestimonial);
+  const canEdit = localTestimonial && localTestimonial.status !== "APPROVED";
 
-  const eligibleCreate = Boolean(orderDelivered && !testimonial && isClient);
+  const eligibleCreate = Boolean(delivered && !localTestimonial && isClient);
 
   const canShowManualCreate = useMemo(() => {
     return status === "authenticated" && eligibleCreate;
@@ -80,7 +120,7 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
 
   const openForm = useCallback(
     (mode: "create" | "edit") => {
-      if (mode === "edit" && testimonial) fillFormFromTestimonial(testimonial);
+      if (mode === "edit" && localTestimonial) fillFormFromTestimonial(localTestimonial);
       else {
         setClientName(session?.user?.name || "");
         setCity("");
@@ -93,30 +133,30 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
       }
       setOpen(true);
     },
-    [testimonial, fillFormFromTestimonial, session?.user?.name],
+    [localTestimonial, fillFormFromTestimonial, session?.user?.name],
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (status !== "authenticated" || !isClient) return;
     if (!eligibleCreate) return;
-    if (localStorage.getItem(dismissKey(orderId))) return;
-    if (localStorage.getItem(autoShownKey(orderId))) return;
+    if (localStorage.getItem(dismissKey(kind, resourceId))) return;
+    if (localStorage.getItem(autoShownKey(kind, resourceId))) return;
     const t = window.setTimeout(() => setOpen(true), 500);
     return () => window.clearTimeout(t);
-  }, [orderId, status, isClient, eligibleCreate]);
+  }, [kind, resourceId, status, isClient, eligibleCreate]);
 
   useEffect(() => {
     if (!open || typeof window === "undefined" || !eligibleCreate) return;
-    localStorage.setItem(autoShownKey(orderId), "1");
-  }, [open, orderId, eligibleCreate]);
+    localStorage.setItem(autoShownKey(kind, resourceId), "1");
+  }, [open, kind, resourceId, eligibleCreate]);
 
   const closeDismiss = useCallback(() => {
     setOpen(false);
     if (typeof window !== "undefined" && eligibleCreate) {
-      localStorage.setItem(dismissKey(orderId), "1");
+      localStorage.setItem(dismissKey(kind, resourceId), "1");
     }
-  }, [orderId, eligibleCreate]);
+  }, [kind, resourceId, eligibleCreate]);
 
   const validate = useCallback(() => {
     const n = clientName.trim();
@@ -157,16 +197,13 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
       if (photoDataUrl) body.photoDataUrl = photoDataUrl;
       if (isEdit && removePhoto) body.removePhoto = true;
 
-      const res = await fetchWithBackendAuth(
-        `${apiBase()}/orders/${encodeURIComponent(orderId)}/testimonials`,
-        {
-          method: isEdit ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          accessToken,
-          update,
-          body: JSON.stringify(body),
-        },
-      );
+      const res = await fetchWithBackendAuth(testimonialApiPath(kind, resourceId), {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        accessToken,
+        update,
+        body: JSON.stringify(body),
+      });
       const text = await res.text();
       if (!res.ok) {
         try {
@@ -179,7 +216,13 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
       }
       setOpen(false);
       if (typeof window !== "undefined" && !isEdit) {
-        localStorage.removeItem(dismissKey(orderId));
+        localStorage.removeItem(dismissKey(kind, resourceId));
+      }
+      try {
+        const saved = JSON.parse(text) as OrderTestimonialData;
+        setLocalTestimonial(saved);
+      } catch {
+        /* ignore parse errors */
       }
       router.refresh();
     } catch (e) {
@@ -191,21 +234,21 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
 
   if (status === "loading") return null;
   if (!isClient) return null;
-  if (!orderDelivered && !testimonial) return null;
+  if (!delivered && !localTestimonial) return null;
 
-  const existingPhoto = testimonial?.photoUrl ? testimonialPhotoUrl(testimonial.photoUrl) : null;
+  const existingPhoto = localTestimonial?.photoUrl ? testimonialPhotoUrl(localTestimonial.photoUrl) : null;
 
   return (
     <>
-      {testimonial ? (
+      {localTestimonial ? (
         <div className="mt-4 rounded-2xl bg-white/70 px-4 py-3 ring-1 ring-black/5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="text-sm">
               <p className="font-semibold text-gray-900">Votre avis</p>
-              <p className="mt-2 text-gray-800 line-clamp-3">“{testimonial.message}”</p>
+              <p className="mt-2 text-gray-800 line-clamp-3">“{localTestimonial.message}”</p>
               <p className="mt-1 text-xs opacity-80">
-                {testimonial.clientName} — {testimonial.city}, {testimonial.country}
-                {testimonial.rating != null ? ` · ${testimonial.rating}/5` : ""}
+                {localTestimonial.clientName} — {localTestimonial.city}, {localTestimonial.country}
+                {localTestimonial.rating != null ? ` · ${localTestimonial.rating}/5` : ""}
               </p>
               {canEdit ? (
                 <p className="mt-2 text-xs text-gray-500">
@@ -232,9 +275,7 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
         </div>
       ) : canShowManualCreate ? (
         <div className="mt-4 rounded-2xl bg-[rgba(195,35,83,0.08)] ring-1 ring-[var(--logo-red)]/20 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-gray-800">
-            Votre commande est livrée. Un avis nous aide à améliorer le service.
-          </p>
+          <p className="text-sm text-gray-800">{createLabel}</p>
           <button type="button" className="btn btn-primary shrink-0" onClick={() => openForm("create")}>
             Donner mon avis
           </button>
@@ -263,7 +304,7 @@ export function OrderTestimonialBlock({ orderId, orderDelivered, testimonial }: 
             <p className="mt-2 text-sm text-gray-600">
               {isEdit
                 ? "Vous pouvez mettre à jour votre message, votre note ou votre photo. Votre avis peut être modifié avant publication."
-                : "Partagez votre expérience (champs marqués * sont obligatoires). Un seul avis par commande."}
+                : formHint}
             </p>
 
             {error ? (

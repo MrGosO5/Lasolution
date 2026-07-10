@@ -4,6 +4,7 @@ import * as React from "react";
 import { clientStatusLabel, formatTransportMode, statusTone } from "@/lib/shipping-expedition-client";
 import { MesExpeditionSuiviModal } from "./MesExpeditionSuiviModal";
 import type { ClientExpeditionMeta } from "@/lib/shipping-expedition-client";
+import type { OrderTestimonialData } from "@/app/site/components/OrderTestimonialBlock";
 
 export type MesExpeditionRow = {
   id: string;
@@ -18,6 +19,7 @@ export type MesExpeditionRow = {
   status: string;
   shippedAt: string | null;
   meta: ClientExpeditionMeta;
+  testimonial?: OrderTestimonialData | null;
 };
 
 export function MesExpeditionsTable({ rows }: { rows: MesExpeditionRow[] }) {
@@ -38,6 +40,7 @@ export function MesExpeditionsTable({ rows }: { rows: MesExpeditionRow[] }) {
         r.destinationAddress,
         r.recipientName,
         r.trackingNumber,
+        r.weightKg,
         statusFr,
         r.status,
       ]
@@ -57,7 +60,7 @@ export function MesExpeditionsTable({ rows }: { rows: MesExpeditionRow[] }) {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Référence, statut, destination…"
+                placeholder="Référence, statut, poids, destination…"
                 className="h-11 w-full rounded-xl bg-white/80 ring-1 ring-black/10 px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(214_54_78/0.25)]"
               />
             </label>
@@ -74,11 +77,12 @@ export function MesExpeditionsTable({ rows }: { rows: MesExpeditionRow[] }) {
           </div>
         ) : (
           <div className="grid overflow-x-auto">
-            <div className="min-w-[860px]">
-              <div className="grid grid-cols-[1fr_1fr_0.8fr_1fr_1fr_0.8fr_0.7fr] gap-2 px-5 py-3 text-xs font-semibold text-gray-600 uppercase bg-black/[0.02] border-b border-black/5">
+            <div className="min-w-[960px]">
+              <div className="grid grid-cols-[1fr_1fr_0.7fr_0.7fr_1fr_1fr_0.8fr_0.7fr] gap-2 px-5 py-3 text-xs font-semibold text-gray-600 uppercase bg-black/[0.02] border-b border-black/5">
                 <span>Référence</span>
                 <span>Statut</span>
                 <span>Mode</span>
+                <span>Poids</span>
                 <span>Destination</span>
                 <span>Destinataire</span>
                 <span>Date</span>
@@ -91,7 +95,7 @@ export function MesExpeditionsTable({ rows }: { rows: MesExpeditionRow[] }) {
                 return (
                   <div
                     key={r.id}
-                    className="grid grid-cols-[1fr_1fr_0.8fr_1fr_1fr_0.8fr_0.7fr] gap-2 px-5 py-4 text-sm border-b border-black/5 hover:bg-black/[0.02] items-center"
+                    className="grid grid-cols-[1fr_1fr_0.7fr_0.7fr_1fr_1fr_0.8fr_0.7fr] gap-2 px-5 py-4 text-sm border-b border-black/5 hover:bg-black/[0.02] items-center"
                   >
                     <span className="font-semibold text-gray-900">#{r.id.slice(0, 8)}</span>
                     <span>
@@ -102,6 +106,7 @@ export function MesExpeditionsTable({ rows }: { rows: MesExpeditionRow[] }) {
                       </span>
                     </span>
                     <span className="text-gray-700">{formatTransportMode(r.transportMode)}</span>
+                    <span className="text-gray-700">{r.weightKg ? `${r.weightKg} kg` : "—"}</span>
                     <span className="text-gray-700">{dest || "—"}</span>
                     <span className="text-gray-700">{rec || "—"}</span>
                     <span className="text-gray-700">{date.toLocaleDateString("fr-FR")}</span>

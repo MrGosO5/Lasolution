@@ -18,6 +18,7 @@ const TESTIMONIAL_SELECT_PUBLIC = {
 const TESTIMONIAL_SELECT_CLIENT = {
   id: true,
   orderId: true,
+  shippingRequestId: true,
   clientName: true,
   city: true,
   country: true,
@@ -37,6 +38,22 @@ function isOrderDelivered(order) {
   const parcels = order.parcels || [];
   if (parcels.length === 0) return false;
   return parcels.every((p) => String(p.status || "").toUpperCase() === "DELIVERED");
+}
+
+function shippingMetaStatus(event) {
+  if (!event?.meta || typeof event.meta !== "object") return "";
+  return String(event.meta.status || "").toUpperCase();
+}
+
+function isShippingRequestDelivered(event) {
+  return shippingMetaStatus(event) === "DELIVERED";
+}
+
+async function loadOwnedShippingRequest(prisma, id, userId) {
+  return prisma.securityEvent.findFirst({
+    where: { id, type: "shipping_request", userId },
+    select: { id: true, userId: true, meta: true },
+  });
 }
 
 function parseTestimonialFields(body) {
@@ -168,6 +185,7 @@ function setupTestimonialRoutes(app, getPrisma) {
         { country: { contains: search, mode: "insensitive" } },
         { message: { contains: search, mode: "insensitive" } },
         { orderId: { contains: search, mode: "insensitive" } },
+        { shippingRequestId: { contains: search, mode: "insensitive" } },
         { user: { email: { contains: search, mode: "insensitive" } } },
       ];
     }
@@ -451,6 +469,159 @@ function setupTestimonialRoutes(app, getPrisma) {
       res.status(400).json({ error: String(e.message || e) });
     }
   });
+
+  app.get("/me/shipping-requests/:id/testimonials", requireAuth, async (req, res) => {
+    if (req.auth.role !== "client") {
+      return res.status(403).json({ error: "Réservé aux clients." });
+    }
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const event = await loadOwnedShippingRequest(prisma, req.params.id, req.auth.sub);
+    if (!event) return res.status(404).json({ error: "Demande d'expédition introuvable." });
+
+    const row = await prisma.orderTestimonial.findUnique({
+      where: { shippingRequestId: event.id },
+      select: TESTIMONIAL_SELECT_CLIENT,
+    });
+    if (!row) return res.status(404).json({ error: "Aucun avis pour cette expédition." });
+    res.json(row);
+  });
+
+  app.post("/me/shipping-requests/:id/testimonials", requireAuth, async (req, res) => {
+    if (req.auth.role !== "client") {
+      return res.status(403).json({ error: "Réservé aux clients." });
+    }
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const event = await loadOwnedShippingRequest(prisma, req.params.id, req.auth.sub);
+    if (!event) return res.status(404).json({ error: "Demande d'expédition introuvable." });
+    if (!isShippingRequestDelivered(event)) {
+      return res.status(400).json({ error: "Témoignage possible uniquement après livraison." });
+    }
+
+    const existing = await prisma.orderTestimonial.findUnique({
+      where: { shippingRequestId: event.id },
+      select: { id: true },
+    });
+    if (existing) {
+      return res.status(409).json({ error: "Un témoignage existe déjà pour cette expédition." });
+    }
+
+    const parsed = parseTestimonialFields(req.body);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+    const { photoDataUrl } = req.body || {};
+    const testimonialId = crypto.randomUUID();
+    let photoUrl = null;
+    if (photoDataUrl) {
+      try {
+        photoUrl = await saveTestimonialPhoto({ testimonialId, photoDataUrl });
+      } catch (e) {
+        return res.status(400).json({ error: "Photo invalide ou trop volumineuse.", code: String(e.code || e.message) });
+      }
+    }
+
+    try {
+      const row = await prisma.orderTestimonial.create({
+        data: {
+          id: testimonialId,
+          shippingRequestId: event.id,
+          userId: req.auth.sub,
+          ...parsed.data,
+          photoUrl,
+          status: "PENDING",
+        },
+        select: TESTIMONIAL_SELECT_CLIENT,
+      });
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.auth.sub,
+          action: "shipping_request.testimonial.created",
+          entityType: "SecurityEvent",
+          entityId: event.id,
+          after: { testimonialId: row.id, status: row.status },
+        },
+      });
+      res.status(201).json(row);
+    } catch (e) {
+      if (photoUrl) await deleteProofByPublicPath(photoUrl);
+      if (e.code === "P2002") {
+        return res.status(409).json({ error: "Un témoignage existe déjà pour cette expédition." });
+      }
+      res.status(400).json({ error: String(e.message || e) });
+    }
+  });
+
+  app.patch("/me/shipping-requests/:id/testimonials", requireAuth, async (req, res) => {
+    if (req.auth.role !== "client") {
+      return res.status(403).json({ error: "Réservé aux clients." });
+    }
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const event = await loadOwnedShippingRequest(prisma, req.params.id, req.auth.sub);
+    if (!event) return res.status(404).json({ error: "Demande d'expédition introuvable." });
+
+    const testimonial = await prisma.orderTestimonial.findUnique({
+      where: { shippingRequestId: event.id },
+    });
+    if (!testimonial) {
+      return res.status(404).json({ error: "Aucun avis pour cette expédition." });
+    }
+    if (testimonial.status === "APPROVED") {
+      return res.status(409).json({ error: "Un avis publié ne peut plus être modifié." });
+    }
+
+    const parsed = parseTestimonialFields(req.body);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+    const { photoDataUrl, removePhoto } = req.body || {};
+    let photoUrl;
+    try {
+      photoUrl = await resolvePhotoUrl({
+        testimonialId: testimonial.id,
+        photoDataUrl,
+        removePhoto: removePhoto === true,
+        existingPhotoUrl: testimonial.photoUrl,
+      });
+    } catch (e) {
+      return res.status(400).json({ error: "Photo invalide ou trop volumineuse.", code: String(e.code || e.message) });
+    }
+
+    const updateData = { ...parsed.data, status: "PENDING", rejectReason: null };
+    if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
+
+    try {
+      const row = await prisma.orderTestimonial.update({
+        where: { id: testimonial.id },
+        data: updateData,
+        select: TESTIMONIAL_SELECT_CLIENT,
+      });
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.auth.sub,
+          action: "shipping_request.testimonial.updated",
+          entityType: "SecurityEvent",
+          entityId: event.id,
+          before: testimonialAuditSnapshot(testimonial),
+          after: {
+            testimonialId: row.id,
+            ...testimonialAuditSnapshot(row),
+          },
+        },
+      });
+      res.json(row);
+    } catch (e) {
+      res.status(400).json({ error: String(e.message || e) });
+    }
+  });
 }
 
-module.exports = { setupTestimonialRoutes, registerMeTestimonialsListRoute, isOrderDelivered };
+module.exports = {
+  setupTestimonialRoutes,
+  registerMeTestimonialsListRoute,
+  isOrderDelivered,
+  isShippingRequestDelivered,
+};
