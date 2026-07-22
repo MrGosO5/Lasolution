@@ -4,8 +4,8 @@
   "private": true,
   "main": "src/server.js",
   "scripts": {
-    "dev": "node src/server.js",
-    "start": "node src/server.js",
+    "dev": "node ./scripts/free-port.cjs && node src/server.js",
+    "start": "node ./scripts/free-port.cjs && node src/server.js",
     "worker": "node src/worker.js",
     "db:env:sync": "node ./scripts/sync-prisma-env.cjs",
     "db:generate": "npm run db:env:sync && node ./node_modules/dotenv-cli/cli.js -e ../.env.local -- node ./scripts/prisma-generate-with-retry.cjs",

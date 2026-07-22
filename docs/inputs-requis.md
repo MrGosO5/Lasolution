@@ -19,7 +19,8 @@ Ce fichier liste les **inputs externes** que le code ne peut pas inventer. Indiq
 | **`STRIPE_SECRET_KEY`** | API Stripe (hors webhook, ex. PaymentIntents réels). |
 | **`STRIPE_WEBHOOK_SECRET`** | Vérification signature sur `POST /webhooks/psp/stripe`. |
 | **Clés agrégateur Afrique** | Selon PSP choisi (Flutterwave, Paystack, etc.). |
-| **Zoho Books** | OAuth client id/secret, org ID, scopes facturation. |
+| **Zoho Books** | OAuth client id/secret, org ID, scopes facturation. Voir `docs/integrations-airtable.md`. |
+| **Airtable** | `AIRTABLE_PAT`, `AIRTABLE_BASE_ID`, table `Colis`, record QR `recn3WIQZNHBhmAhU`. |
 | **SMTP / SendGrid / Twilio** | Emails transactionnels, SMS OTP livraison. |
 | **S3 / bucket prod** | PDF factures, étiquettes, KYC (au-delà de MinIO dev). |
 | **`API_JWT_SECRET` + `NEXTAUTH_SECRET`** | Déjà requis ; en prod : secrets forts distincts, rotation planifiée. |

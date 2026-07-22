@@ -1033,9 +1033,12 @@ function setupAdminStatsRoute(app) {
   });
 }
 
+const { setupIntegrationsRoutes } = require("./integrationsRoutes");
+
 function setupRoutes(app, config) {
   setupAuthRoutes(app, getPrisma, config);
   setupMfaRoutes(app, getPrisma);
+  setupIntegrationsRoutes(app, getPrisma);
   setupOrderParcelRoutes(app, getPrisma);
   setupTestimonialRoutes(app, getPrisma);
   setupMissionRoutes(app, getPrisma);

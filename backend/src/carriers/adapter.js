@@ -3,18 +3,22 @@
  * @see docs (plan carrier-labels)
  */
 
+const { formatAirtableTrackingNumber } = require("../lib/airtableTracking");
+
 class CarrierAdapter {
   constructor(name = "stub") {
     this.name = name;
   }
 
-  async createShipment({ parcelId, weightKg, toAddress }) {
+  async createShipment({ parcelId, trackingNumber, weightKg, toAddress }) {
+    const tracking = trackingNumber || formatAirtableTrackingNumber(parcelId);
+    const qrPayload = process.env.LINKTREE_URL || "https://linktr.ee/LaSolution";
     return {
       ok: true,
       carrier: this.name,
-      trackingNumber: `TRK-${parcelId}-${Date.now()}`,
+      trackingNumber: tracking,
       labelUrl: null,
-      qrPayload: `parcel:${parcelId}:${Date.now()}`,
+      qrPayload,
     };
   }
 }

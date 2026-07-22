@@ -36,6 +36,27 @@ export type OrderDetailData = {
   pointRelaisAdresse: string;
   orderLines: { description: string; quantity: number; lineTotal: string }[];
   proofImageUrl: string;
+  airtableRecordId?: string | null;
+  airtableOrderId?: number | null;
+  airtableLastSyncedAt?: string | null;
+  lastAirtableError?: string | null;
+  invoice?: {
+    status?: string;
+    zohoDraftId?: string | null;
+    zohoInvoiceId?: string | null;
+    zohoSyncStatus?: string | null;
+    lastSyncError?: string | null;
+    lines?: { label?: string; amount?: unknown }[];
+  } | null;
+  integrations?: {
+    provider?: string;
+    status?: string | null;
+    externalId?: string | null;
+    lastSyncedAt?: string | null;
+    lastErrorCode?: string | null;
+    lastErrorMessage?: string | null;
+  }[];
+  appTrackingNumber?: string | null;
 };
 
 function apiStatusToUI(s: string): OrderStatus {
@@ -161,6 +182,19 @@ export function mapApiOrderToDetailData(order: Record<string, unknown>): OrderDe
 
   const proofImageUrl = String(order.proofImageUrl || "");
 
+  const invoices = (order.invoices as Array<Record<string, unknown>>) || [];
+  const inv0 = invoices[0];
+  const invoice = inv0
+    ? {
+        status: String(inv0.status || ""),
+        zohoDraftId: (inv0.zohoDraftId as string) || null,
+        zohoInvoiceId: (inv0.zohoInvoiceId as string) || null,
+        zohoSyncStatus: (inv0.zohoSyncStatus as string) || null,
+        lastSyncError: (inv0.lastSyncError as string) || null,
+        lines: (inv0.lines as Array<{ label?: string; amount?: unknown }>) || [],
+      }
+    : null;
+
   return {
     id: String(order.id),
     statut: apiStatusToUI(String(order.status)),
@@ -188,5 +222,14 @@ export function mapApiOrderToDetailData(order: Record<string, unknown>): OrderDe
     pointRelaisAdresse: "—",
     orderLines,
     proofImageUrl,
+    airtableRecordId: (order.airtableRecordId as string) || null,
+    airtableOrderId: order.airtableOrderId != null ? Number(order.airtableOrderId) : null,
+    airtableLastSyncedAt: order.airtableLastSyncedAt != null ? String(order.airtableLastSyncedAt) : null,
+    lastAirtableError: (order.lastAirtableError as string) || null,
+    invoice,
+    integrations: Array.isArray(order.integrations)
+      ? (order.integrations as OrderDetailData["integrations"])
+      : [],
+    appTrackingNumber: (order.appTrackingNumber as string) || null,
   };
 }

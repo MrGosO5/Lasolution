@@ -1,5 +1,5 @@
-import QRCode from "qrcode";
 import { formatTransport, type ExpeditionDetailData } from "./expedition-detail-data";
+import { resolveLasolTrackingNumber } from "@/lib/airtable-tracking";
 
 /** Coordonnées du hub relai affichées sur l'étiquette (constantes marque). */
 const RELAY_PARTNER = {
@@ -9,10 +9,13 @@ const RELAY_PARTNER = {
 };
 
 /** URL encodée dans le QR code (réseaux / avis). */
-function qrTargetUrl(): string {
-  const base =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_SITE_URL) || "https://lasolution.org";
-  return `${String(base).replace(/\/$/, "")}/mes-avis`;
+function qrTargetUrl(meta?: ExpeditionDetailData["meta"]): string {
+  const payload = String(meta?.labelQrPayload || "").trim();
+  if (payload.startsWith("http://") || payload.startsWith("https://")) return payload;
+  const linktree =
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_LINKTREE_URL) ||
+    "https://linktr.ee/LaSolution";
+  return String(linktree).replace(/\/$/, "");
 }
 
 function escapeHtml(value: unknown): string {
@@ -43,7 +46,7 @@ function labelDocumentHtml(data: ExpeditionDetailData, qrDataUrl: string): strin
   const meta = data.meta || {};
   const sender = splitName(meta.senderName);
   const recipient = splitName(meta.recipientName);
-  const tracking = meta.labelTrackingNumber || meta.trackingNumber || `LASOL-${data.id.slice(0, 12).toUpperCase()}`;
+  const tracking = resolveLasolTrackingNumber(data.id, meta);
   const transport = formatTransport(meta.transportMode);
   const transportBadge = transport === "Aérien" ? "Transport Aérien" : transport === "Maritime" ? "Transport Maritime" : "Transport";
   const departure = meta.pickupAddress || "—";
@@ -244,7 +247,8 @@ function labelDocumentHtml(data: ExpeditionDetailData, qrDataUrl: string): strin
  * option « Enregistrer au format PDF ») dans une nouvelle fenêtre.
  */
 export async function openExpeditionLabel(data: ExpeditionDetailData): Promise<void> {
-  const qrDataUrl = await QRCode.toDataURL(qrTargetUrl(), {
+  const QRCode = (await import("qrcode")).default;
+  const qrDataUrl = await QRCode.toDataURL(qrTargetUrl(data.meta), {
     margin: 1,
     width: 240,
     errorCorrectionLevel: "M",

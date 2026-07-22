@@ -32,6 +32,9 @@ export function CommandeDetailClient({
   const [parcelLoading, setParcelLoading] = React.useState(false);
   const [parcelError, setParcelError] = React.useState<string | null>(null);
   const [refreshLoading, setRefreshLoading] = React.useState(false);
+  const [integrationLoading, setIntegrationLoading] = React.useState<string | null>(null);
+  const [integrationError, setIntegrationError] = React.useState<string | null>(null);
+  const [integrationSuccess, setIntegrationSuccess] = React.useState<string | null>(null);
 
   const selectedParcel = React.useMemo(() => {
     const p = data.parcels?.find((x) => x.id === selectedParcelId);
@@ -111,6 +114,7 @@ export function CommandeDetailClient({
   async function refreshFromApi() {
     setPatchError(null);
     setParcelError(null);
+    setIntegrationError(null);
     setRefreshLoading(true);
     try {
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(data.id)}`);
@@ -243,6 +247,26 @@ export function CommandeDetailClient({
     window.print();
   };
 
+  async function runIntegration(path: string, label: string) {
+    setIntegrationError(null);
+    setIntegrationSuccess(null);
+    setIntegrationLoading(label);
+    try {
+      const res = await fetch(path, { method: "POST" });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+      await refreshFromApi();
+      setIntegrationSuccess(`${label} effectué.`);
+    } catch (e) {
+      setIntegrationError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setIntegrationLoading(null);
+    }
+  }
+
+  const invoiceAmount =
+    data.invoice?.lines?.[0]?.amount != null ? Number(data.invoice.lines[0].amount) : null;
+
   const statusLabel: Record<OrderStatus, string> = {
     en_attente: "En attente",
     annule: "Annulé",
@@ -260,6 +284,12 @@ export function CommandeDetailClient({
       ) : null}
       {parcelError ? (
         <p className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 print:hidden">{parcelError}</p>
+      ) : null}
+      {integrationError ? (
+        <p className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 print:hidden">{integrationError}</p>
+      ) : null}
+      {integrationSuccess ? (
+        <p className="mb-3 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 print:hidden">{integrationSuccess}</p>
       ) : null}
       <section className="flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
@@ -457,6 +487,96 @@ export function CommandeDetailClient({
               ))}
             </ol>
           )}
+        </InfoCard>
+
+        <InfoCard title="Facture Zoho &amp; Airtable">
+          <dl className="grid gap-2 text-sm mb-3">
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Montant expédition</dt>
+              <dd className="font-semibold">
+                {invoiceAmount != null && Number.isFinite(invoiceAmount)
+                  ? `${invoiceAmount.toFixed(2)} €`
+                  : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Statut facture</dt>
+              <dd>{data.invoice?.status || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Brouillon Zoho</dt>
+              <dd className="font-mono text-xs truncate max-w-[160px]">{data.invoice?.zohoDraftId || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Record Airtable</dt>
+              <dd className="font-mono text-xs truncate max-w-[160px]">{data.airtableRecordId || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Dernière sync Airtable</dt>
+              <dd className="text-xs">
+                {data.airtableLastSyncedAt
+                  ? new Date(data.airtableLastSyncedAt).toLocaleString("fr-FR")
+                  : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">N° suivi app</dt>
+              <dd className="font-mono text-xs">{data.appTrackingNumber || "—"}</dd>
+            </div>
+          </dl>
+          {data.invoice?.lastSyncError ? (
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-2">
+              Zoho : {data.invoice.lastSyncError}
+            </p>
+          ) : null}
+          {data.lastAirtableError ? (
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-2">
+              Airtable : {data.lastAirtableError}
+            </p>
+          ) : null}
+          {(data.integrations || [])
+            .filter((l) => l.lastErrorCode || l.lastErrorMessage)
+            .map((l) => (
+              <p
+                key={`${l.provider}-${l.externalId}`}
+                className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-2"
+              >
+                {l.provider}: {l.lastErrorCode ? `[${l.lastErrorCode}] ` : ""}
+                {l.lastErrorMessage}
+              </p>
+            ))}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!!integrationLoading || !selectedParcel?.weightKg}
+              onClick={() =>
+                void runIntegration(`/api/admin/orders/${encodeURIComponent(data.id)}/zoho/draft`, "Brouillon Zoho")
+              }
+              className="rounded-lg border border-figma-tableBorder px-3 py-2 text-xs font-medium hover:bg-figma-tableHeader disabled:opacity-50"
+            >
+              {integrationLoading === "Brouillon Zoho" ? "…" : "Générer brouillon Zoho"}
+            </button>
+            <button
+              type="button"
+              disabled={!!integrationLoading || !data.invoice?.zohoDraftId}
+              onClick={() =>
+                void runIntegration(`/api/admin/orders/${encodeURIComponent(data.id)}/zoho/approve`, "Validation Zoho")
+              }
+              className="rounded-lg border border-figma-tableBorder px-3 py-2 text-xs font-medium hover:bg-figma-tableHeader disabled:opacity-50"
+            >
+              {integrationLoading === "Validation Zoho" ? "…" : "Valider facture Zoho"}
+            </button>
+            <button
+              type="button"
+              disabled={!!integrationLoading}
+              onClick={() =>
+                void runIntegration(`/api/admin/orders/${encodeURIComponent(data.id)}/airtable/sync`, "Sync Airtable")
+              }
+              className="rounded-lg border border-figma-tableBorder px-3 py-2 text-xs font-medium hover:bg-figma-tableHeader disabled:opacity-50"
+            >
+              {integrationLoading === "Sync Airtable" ? "…" : "Forcer sync Airtable"}
+            </button>
+          </div>
         </InfoCard>
 
         <InfoCard title="Articles">

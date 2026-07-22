@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { resolveLasolTrackingNumber } from "@/lib/airtable-tracking";
 import { ExpeditionManageModal } from "./ExpeditionManageModal";
 import {
   DEFAULT_SHIPPING_STATUS,
@@ -211,7 +212,9 @@ export function ExpeditionsTableClient({ initialRows }: { initialRows: ShippingR
                       />
                       {weightSaving ? <p className="mt-1 text-xs text-figma-adminSub">Enregistrement…</p> : null}
                     </td>
-                    <td className="px-4 py-3 text-sm text-figma-headerTitle">{safeString(meta.trackingNumber) || "—"}</td>
+                    <td className="px-4 py-3 text-sm text-figma-headerTitle font-mono text-xs">
+                      {resolveLasolTrackingNumber(ev.id, meta) || "—"}
+                    </td>
                     <td className="px-4 py-3 text-sm text-figma-headerTitle">{photoBytes}</td>
                     <td className="px-4 py-3 text-sm text-figma-headerTitle">{notes || "—"}</td>
                     <td className="px-4 py-3 text-sm">

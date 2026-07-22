@@ -27,6 +27,29 @@ enum TestimonialStatus {
   REJECTED
 }
 
+enum IntegrationProvider {
+  AIRTABLE
+  ZOHO
+}
+
+enum IntegrationEntity {
+  SHIPPING_REQUEST
+  ORDER
+}
+
+enum IntegrationStatus {
+  PENDING
+  SYNCED
+  FAILED
+  DRAFT
+  SENT
+}
+
+enum IntegrationSyncSource {
+  APP
+  AIRTABLE
+}
+
 model Country {
   id        String    @id @default(cuid())
   code      String    @unique
@@ -167,6 +190,12 @@ model Order {
   currency           String               @default("EUR")
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  /// Sync Airtable table Colis
+  airtableRecordId     String?
+  airtableOrderId      Int?
+  airtableLastSyncedAt DateTime?
+  airtableSyncSource   String?
+  lastAirtableError    String?
   lines              OrderLine[]
   parcels            Parcel[]
   invoices           Invoice[]
@@ -465,4 +494,28 @@ model AuditLog {
   before     Json?
   after      Json?
   createdAt  DateTime @default(now())
+}
+
+/// Liens vers systèmes externes (Airtable, Zoho) — hors modèle métier.
+model IntegrationLink {
+  id               String                 @id @default(cuid())
+  entityType       IntegrationEntity
+  entityId         String
+  provider         IntegrationProvider
+  externalId       String
+  status           IntegrationStatus      @default(PENDING)
+  lastSyncedAt     DateTime?
+  lastErrorCode    String?
+  lastErrorMessage String?
+  lastAttemptAt    DateTime?
+  retryCount       Int                    @default(0)
+  syncSource       IntegrationSyncSource? @default(APP)
+  /// Satellite : zohoContactId, airtableOrderId, …
+  meta             Json?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([entityType, entityId, provider])
+  @@index([provider, externalId])
+  @@index([status, lastAttemptAt])
 }

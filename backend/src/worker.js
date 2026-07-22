@@ -6,8 +6,11 @@ dotenv.config();
 
 const { prisma } = require("./db");
 const { processWebhookPayload } = require("./webhooks/processWebhook");
+const { runAirtablePullBatch } = require("./integrations/airtable/pullWorker");
+const { airtableConfig } = require("./integrations/integrationsConfig");
 
 const INTERVAL_MS = parseInt(process.env.WORKER_POLL_MS || "4000", 10);
+let lastAirtablePullAt = 0;
 
 async function processBatch() {
   const batch = await prisma.webhookEvent.findMany({
@@ -39,11 +42,28 @@ async function processBatch() {
   }
 }
 
+async function maybeAirtablePull() {
+  const cfg = airtableConfig();
+  if (!cfg.pullEnabled) return;
+  const now = Date.now();
+  if (now - lastAirtablePullAt < cfg.pullIntervalMs) return;
+  lastAirtablePullAt = now;
+  try {
+    await runAirtablePullBatch(prisma);
+  } catch (e) {
+    console.error("[worker] Airtable pull:", e?.message || e);
+  }
+}
+
 async function main() {
-  console.log("[worker] Lasolution worker démarré (webhooks PSP async).");
+  const pullOn = airtableConfig().pullEnabled;
+  console.log(
+    `[worker] Lasolution worker démarré (webhooks PSP${pullOn ? " + Airtable pull" : ""}).`,
+  );
   for (;;) {
     try {
       await processBatch();
+      await maybeAirtablePull();
     } catch (e) {
       console.error("[worker]", e);
     }

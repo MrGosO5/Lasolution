@@ -38,7 +38,15 @@ export type ExpeditionMeta = {
   zohoDraftId?: string | null;
   zohoInvoiceId?: string | null;
   invoiceStatus?: string | null;
+  invoiceAmountEur?: number | null;
   zohoSyncStatus?: string | null;
+  lastSyncError?: string | null;
+  airtableRecordId?: string | null;
+  airtableOrderId?: number | null;
+  airtableLastSyncedAt?: string | null;
+  syncSource?: string | null;
+  lastAirtableError?: string | null;
+  inboundTrackingNumber?: string | null;
   labelTrackingNumber?: string | null;
   labelUrl?: string | null;
   labelQrPayload?: string | null;
@@ -54,6 +62,19 @@ export type ExpeditionDetailData = {
   clientName: string | null;
   createdAt: string;
   meta: ExpeditionMeta;
+  integrations?: IntegrationLinkView[];
+};
+
+export type IntegrationLinkView = {
+  provider?: string;
+  status?: string | null;
+  externalId?: string | null;
+  lastSyncedAt?: string | null;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+  lastAttemptAt?: string | null;
+  retryCount?: number | null;
+  meta?: Record<string, unknown> | null;
 };
 
 export const SHIPPING_STATUS_OPTIONS: { value: ShippingStatus; label: string }[] = [
@@ -96,6 +117,12 @@ export function formatTransport(mode: unknown): string {
   return "—";
 }
 
+function coerceInvoiceAmount(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function mapListEventToDetail(ev: {
   id: string;
   email: string | null;
@@ -112,6 +139,7 @@ export function mapListEventToDetail(ev: {
     meta: {
       ...meta,
       status: (meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS,
+      invoiceAmountEur: coerceInvoiceAmount(meta.invoiceAmountEur),
     },
   };
 }
@@ -125,6 +153,7 @@ export function mapApiToExpeditionDetail(raw: {
     client?: { email?: string; name?: string | null };
   };
   clientEmail?: string | null;
+  integrations?: IntegrationLinkView[];
 }): ExpeditionDetailData {
   const ev = raw.event;
   const meta = ev.meta || {};
@@ -137,6 +166,8 @@ export function mapApiToExpeditionDetail(raw: {
     meta: {
       ...meta,
       status: (meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS,
+      invoiceAmountEur: coerceInvoiceAmount(meta.invoiceAmountEur),
     },
+    integrations: Array.isArray(raw.integrations) ? raw.integrations : [],
   };
 }

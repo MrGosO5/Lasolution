@@ -2,17 +2,21 @@ const { createSmtpTransporter, buildMailFrom, sendMail } = require("../emails/ma
 const { sendShippingRequestEmailJs } = require("../emails/emailjsShipping");
 const { buildShippingRequestPlainText } = require("../emails/shippingRequestEmail");
 const { requireAuth, requireRoles } = require("../middleware/auth");
+const { syncShippingRequestAirtable } = require("../lib/airtableShippingSync");
+const { pushToZoho, getIntegration } = require("../integrations/integrationService");
 const {
   isValidStatus,
   saveShippingPhoto,
   resolvePhotoAbs,
   deleteShippingPhoto,
+  withLasolTracking,
   attachZohoDraft,
   mergeEditableMeta,
   approveZohoForMeta,
   generateLabelForMeta,
   appendCommunication,
   sanitizeMetaForClient,
+  ensureZohoDraftForMeta,
 } = require("../lib/shippingRequestOps");
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
@@ -127,11 +131,34 @@ function setupShippingRequestRoutes(app, getPrisma) {
           },
         });
         const photoPath = saveShippingPhoto(created.id, photoBuf, photoMime);
-        const withPhoto = { ...baseMeta, photoPath };
+        const withPhoto = withLasolTracking(
+          {
+            ...baseMeta,
+            photoPath,
+            inboundTrackingNumber: trackingNumber?.trim() || null,
+          },
+          created.id,
+        );
         await prisma.securityEvent.update({
           where: { id: created.id },
-          data: { meta: await attachZohoDraft(withPhoto, created.id) },
+          data: { meta: withPhoto },
         });
+        await pushToZoho(prisma, {
+          entityType: "SHIPPING_REQUEST",
+          entityId: created.id,
+          action: "draft",
+          customer: {
+            email: isNonEmptyString(contactEmail) ? String(contactEmail).trim() : null,
+            name: senderName,
+            phone: senderPhone,
+          },
+        });
+        const saved = await prisma.securityEvent.findUnique({ where: { id: created.id } });
+        if (saved) {
+          void syncShippingRequestAirtable(prisma, saved, contactEmail).catch((e) =>
+            console.warn("[shipping-requests] Airtable async:", e?.message || e),
+          );
+        }
       } catch (logErr) {
         console.warn("[shipping-requests] SecurityEvent non enregistré:", logErr?.message || logErr);
       }
@@ -253,7 +280,7 @@ function setupShippingRequestRoutes(app, getPrisma) {
       events: events.map((ev) => ({
         id: ev.id,
         createdAt: ev.createdAt,
-        meta: sanitizeMetaForClient(ev.meta),
+        meta: sanitizeMetaForClient(ev.meta, ev.id),
         testimonial: testimonialByRequestId.get(ev.id) || null,
       })),
     });
@@ -325,7 +352,14 @@ function setupAdminShippingRequestRoutes(app, getPrisma) {
       }
     }
 
-    res.json({ event, clientEmail });
+    res.json({
+      event,
+      clientEmail,
+      integrations: await getIntegration(prisma, {
+        entityType: "SHIPPING_REQUEST",
+        entityId: event.id,
+      }),
+    });
   });
 
   app.patch("/admin/shipping-requests/:id", ...adminOnly, async (req, res) => {
@@ -340,15 +374,51 @@ function setupAdminShippingRequestRoutes(app, getPrisma) {
       return res.status(400).json({ error: "Statut invalide." });
     }
 
-    const nextMeta = mergeEditableMeta(event.meta, body);
+    const nextMeta = mergeEditableMeta(event.meta, body, event.id);
+    const withInvoice = await ensureZohoDraftForMeta(nextMeta, event.id);
 
-    const updated = await prisma.securityEvent.update({
+    let updated = await prisma.securityEvent.update({
       where: { id: event.id },
-      data: { meta: nextMeta },
+      data: { meta: withInvoice },
       select: { id: true, email: true, userId: true, createdAt: true, meta: true },
     });
 
+    updated = await syncShippingRequestAirtable(prisma, updated, event.email);
+
     res.json({ event: updated });
+  });
+
+  app.post("/admin/shipping-requests/:id/zoho/draft", ...adminOnly, async (req, res) => {
+    const prisma = typeof getPrisma === "function" ? getPrisma() : null;
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const event = await loadShippingRequest(prisma, req.params.id);
+    if (!event) return res.status(404).json({ error: "Demande introuvable." });
+
+    const result = await pushToZoho(prisma, {
+      entityType: "SHIPPING_REQUEST",
+      entityId: event.id,
+      action: "ensure",
+    });
+    const nextMeta = result.meta || result.event?.meta;
+    if (!nextMeta?.zohoDraftId && nextMeta?.zohoSyncStatus !== "FAILED") {
+      return res.status(400).json({ error: "Renseignez le poids (kg) avant de générer la facture." });
+    }
+    if (!result.ok && nextMeta?.lastSyncError) {
+      return res.status(502).json({
+        error: nextMeta.lastSyncError,
+        code: "ZOHO_SYNC_FAILED",
+        event: result.event,
+      });
+    }
+
+    res.json({
+      ok: true,
+      zohoDraftId: nextMeta.zohoDraftId,
+      invoiceAmountEur: nextMeta.invoiceAmountEur,
+      invoiceStatus: nextMeta.invoiceStatus,
+      event: result.event,
+    });
   });
 
   app.post("/admin/shipping-requests/:id/zoho/approve", ...adminOnly, async (req, res) => {
@@ -358,19 +428,26 @@ function setupAdminShippingRequestRoutes(app, getPrisma) {
     const event = await loadShippingRequest(prisma, req.params.id);
     if (!event) return res.status(404).json({ error: "Demande introuvable." });
 
-    const nextMeta = await approveZohoForMeta(event.meta || {});
-    const updated = await prisma.securityEvent.update({
-      where: { id: event.id },
-      data: { meta: nextMeta },
-      select: { id: true, meta: true },
+    const result = await pushToZoho(prisma, {
+      entityType: "SHIPPING_REQUEST",
+      entityId: event.id,
+      action: "approve",
     });
+    const nextMeta = result.meta || result.event?.meta || {};
+    if (!result.ok && nextMeta.lastSyncError) {
+      return res.status(502).json({
+        error: nextMeta.lastSyncError,
+        code: "ZOHO_SYNC_FAILED",
+        event: result.event,
+      });
+    }
 
     res.json({
       ok: true,
       zohoDraftId: nextMeta.zohoDraftId,
       zohoInvoiceId: nextMeta.zohoInvoiceId,
       invoiceStatus: nextMeta.invoiceStatus,
-      event: updated,
+      event: result.event,
     });
   });
 
@@ -424,6 +501,17 @@ function setupAdminShippingRequestRoutes(app, getPrisma) {
     });
   });
 
+  app.post("/admin/shipping-requests/:id/airtable/sync", ...adminOnly, async (req, res) => {
+    const prisma = typeof getPrisma === "function" ? getPrisma() : null;
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const event = await loadShippingRequest(prisma, req.params.id);
+    if (!event) return res.status(404).json({ error: "Demande introuvable." });
+
+    const updated = await syncShippingRequestAirtable(prisma, event, event.email);
+    res.json({ ok: true, event: updated });
+  });
+
   app.post("/admin/shipping-requests/:id/label", ...adminOnly, async (req, res) => {
     const prisma = typeof getPrisma === "function" ? getPrisma() : null;
     if (!prisma) return res.status(503).json({ error: "Base indisponible." });
@@ -473,7 +561,7 @@ function setupAdminShippingRequestRoutes(app, getPrisma) {
   });
 
   console.log(
-    "[shipping-requests] Routes admin: GET/PATCH/DELETE /admin/shipping-requests/:id, zoho/approve, communicate, label, photo",
+    "[shipping-requests] Routes admin: GET/PATCH/DELETE /admin/shipping-requests/:id, zoho/draft, zoho/approve, airtable/sync, communicate, label, photo",
   );
 }
 

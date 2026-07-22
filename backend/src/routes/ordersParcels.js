@@ -10,6 +10,9 @@ const { sendMail, createSmtpTransporter, buildMailFrom } = require("../emails/ma
 const { orderStatusEmail } = require("../emails/templates");
 const { encryptJsonFields, decryptJsonFields } = require("../crypto/fieldEncryption");
 const { registerMeTestimonialsListRoute } = require("./testimonials");
+const { syncOrderAirtable } = require("../lib/airtableOrderSync");
+const { pushToZoho, getIntegration } = require("../integrations/integrationService");
+const { formatAirtableTrackingNumber } = require("../lib/airtableTracking");
 
 const PROFILE_ENCRYPT_KEYS = ["phone"];
 
@@ -344,6 +347,7 @@ function setupOrderParcelRoutes(app, getPrisma) {
         user: { select: { id: true, email: true, name: true, profile: true } },
         lines: true,
         parcels: { include: { trackingEvents: { orderBy: { createdAt: "desc" }, take: 20 } } },
+        invoices: { include: { lines: true }, orderBy: { createdAt: "desc" }, take: 1 },
         procurement: { include: { lines: true } },
         testimonial: {
           select: {
@@ -374,6 +378,11 @@ function setupOrderParcelRoutes(app, getPrisma) {
         orderBy: { createdAt: "asc" },
       });
       if (wh) payload.defaultWarehouse = wh;
+      payload.integrations = await getIntegration(prisma, {
+        entityType: "ORDER",
+        entityId: order.id,
+      });
+      payload.appTrackingNumber = formatAirtableTrackingNumber(order.id);
     }
     res.json(payload);
   });
@@ -837,6 +846,12 @@ function setupOrderParcelRoutes(app, getPrisma) {
         return res.status(500).json({ error: "Colis introuvable après mise à jour." });
       }
       res.status(idempotent ? 200 : 201).json(full);
+
+      if (!idempotent && full?.order?.id) {
+        void syncOrderAirtable(prisma, full.order.id).catch((e) =>
+          console.warn("[orders] warehouse-receipt airtable:", e?.message || e),
+        );
+      }
     } catch (e) {
       const status = e.status || 400;
       res.status(status).json({ error: e.message || String(e) });
@@ -954,6 +969,12 @@ function setupOrderParcelRoutes(app, getPrisma) {
         return res.status(500).json({ error: "Colis introuvable après mise à jour." });
       }
       res.status(idempotent ? 200 : 201).json(full);
+
+      if (!idempotent && full?.order?.id) {
+        void syncOrderAirtable(prisma, full.order.id).catch((e) =>
+          console.warn("[orders] ship airtable:", e?.message || e),
+        );
+      }
     } catch (e) {
       const status = e.status || 400;
       res.status(status).json({ error: e.message || String(e) });
@@ -1031,9 +1052,74 @@ function setupOrderParcelRoutes(app, getPrisma) {
       });
 
       res.json(updated);
+
+      void (async () => {
+        try {
+          const order = await prisma.order.findUnique({
+            where: { id: before.orderId },
+            include: { user: { select: { email: true, name: true } } },
+          });
+          if (order) {
+            await pushToZoho(prisma, {
+              entityType: "ORDER",
+              entityId: order.id,
+              action: "draft",
+              customer: { email: order.user?.email, name: order.user?.name },
+            });
+            await syncOrderAirtable(prisma, order.id);
+          }
+        } catch (e) {
+          console.warn("[orders] post-weight sync:", e?.message || e);
+        }
+      })();
     } catch (e) {
       res.status(400).json({ error: String(e.message || e) });
     }
+  });
+
+  app.post("/orders/:id/zoho/draft", ...adminOnly, async (req, res) => {
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const result = await pushToZoho(prisma, {
+      entityType: "ORDER",
+      entityId: req.params.id,
+      action: "draft",
+    });
+    if (!result.ok) {
+      const status = result.code === "ENTITY_NOT_FOUND" ? 404 : result.code === "WEIGHT_REQUIRED" ? 409 : 400;
+      return res.status(status).json({ error: result.error || "Échec Zoho." });
+    }
+    res.json({ ok: true, invoice: result.invoice });
+  });
+
+  app.post("/orders/:id/zoho/approve", ...adminOnly, async (req, res) => {
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const result = await pushToZoho(prisma, {
+      entityType: "ORDER",
+      entityId: req.params.id,
+      action: "approve",
+    });
+    if (!result.ok) {
+      const status = result.code === "ENTITY_NOT_FOUND" ? 404 : 400;
+      return res.status(status).json({ error: result.error || "Échec Zoho." });
+    }
+    res.json({ ok: true, invoice: result.invoice });
+  });
+
+  app.post("/orders/:id/airtable/sync", ...adminOnly, async (req, res) => {
+    const prisma = getPrisma();
+    if (!prisma) return res.status(503).json({ error: "Base indisponible." });
+
+    const result = await syncOrderAirtable(prisma, req.params.id);
+    if (!result.ok) {
+      return res.status(result.reason === "Commande introuvable" ? 404 : 400).json({
+        error: result.error || result.reason || "Sync Airtable échouée.",
+      });
+    }
+    res.json({ ok: true, order: result.order, trackingNumber: result.trackingNumber });
   });
 }
 

@@ -87,10 +87,15 @@ export function ExpeditionDetailClient({
       error?: string;
       event?: ApiDetailResponse["event"];
       clientEmail?: string | null;
+      integrations?: ExpeditionDetailData["integrations"];
     };
     if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
     if (json.event) {
-      const next = mapApiToExpeditionDetail({ event: json.event, clientEmail: json.clientEmail });
+      const next = mapApiToExpeditionDetail({
+        event: json.event,
+        clientEmail: json.clientEmail,
+        integrations: json.integrations,
+      });
       applyData(next);
       setStatus((next.meta.status as ShippingStatus) || DEFAULT_SHIPPING_STATUS);
       setEditForm(Object.fromEntries(EDIT_FIELDS.map((f) => [f.key, String(next.meta[f.key] ?? "")])));
@@ -136,6 +141,25 @@ export function ExpeditionDetailClient({
     }
   }
 
+  async function forceAirtableSync() {
+    setError(null);
+    setSuccess(null);
+    setLoading("Sync Airtable");
+    try {
+      const res = await fetch(`/api/admin/shipping-requests/${encodeURIComponent(id)}/airtable/sync`, {
+        method: "POST",
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+      await refresh();
+      setSuccess("Synchronisation Airtable effectuée.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setLoading(null);
+    }
+  }
+
   async function approveZoho() {
     setError(null);
     setSuccess(null);
@@ -152,6 +176,29 @@ export function ExpeditionDetailClient({
         /* garde les données locales */
       }
       setSuccess("Facture Zoho validée (brouillon → envoyée).");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function createZohoDraft() {
+    setError(null);
+    setSuccess(null);
+    setLoading("Génération facture brouillon");
+    try {
+      const res = await fetch(`/api/admin/shipping-requests/${encodeURIComponent(id)}/zoho/draft`, {
+        method: "POST",
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
+      try {
+        await refresh();
+      } catch {
+        /* garde les données locales */
+      }
+      setSuccess("Facture brouillon générée ou mise à jour.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -256,6 +303,18 @@ export function ExpeditionDetailClient({
           <h2 className="text-sm font-semibold text-figma-headerTitle mb-3">Facture Zoho Books</h2>
           <dl className="grid gap-2 text-sm mb-3">
             <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Montant estimé</dt>
+              <dd className="font-semibold">
+                {data.meta.invoiceAmountEur != null && Number.isFinite(Number(data.meta.invoiceAmountEur))
+                  ? `${Number(data.meta.invoiceAmountEur).toFixed(2)} €`
+                  : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Statut</dt>
+              <dd>{data.meta.invoiceStatus || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
               <dt className="text-figma-adminSub">Brouillon</dt>
               <dd className="font-mono text-xs truncate max-w-[180px]">{data.meta.zohoDraftId || "—"}</dd>
             </div>
@@ -263,14 +322,82 @@ export function ExpeditionDetailClient({
               <dt className="text-figma-adminSub">Facture validée</dt>
               <dd className="font-mono text-xs truncate max-w-[180px]">{data.meta.zohoInvoiceId || "—"}</dd>
             </div>
+            {data.meta.lastSyncError ? (
+              <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+                Zoho : {data.meta.lastSyncError}
+              </p>
+            ) : null}
           </dl>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!!loading || !data.meta.weightKg}
+              onClick={() => void createZohoDraft()}
+              className="rounded-lg border border-figma-tableBorder px-3 py-2 text-sm font-medium hover:bg-figma-tableHeader disabled:opacity-50"
+            >
+              Générer / mettre à jour le brouillon
+            </button>
+            <button
+              type="button"
+              disabled={!!loading || data.meta.invoiceStatus === "APPROVED" || !data.meta.zohoDraftId}
+              onClick={() => void approveZoho()}
+              className="rounded-lg border border-figma-tableBorder px-3 py-2 text-sm font-medium hover:bg-figma-tableHeader disabled:opacity-50"
+            >
+              Valider la facture brouillon
+            </button>
+          </div>
+          {!data.meta.weightKg ? (
+            <p className="mt-2 text-xs text-figma-adminSub">Renseignez le poids (kg) pour calculer le montant de la facture.</p>
+          ) : null}
+        </section>
+
+        <section className="border border-figma-tableBorder rounded-card bg-white p-4">
+          <h2 className="text-sm font-semibold text-figma-headerTitle mb-3">Sync Airtable</h2>
+          <dl className="grid gap-2 text-sm mb-3">
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">N° suivi La Solution</dt>
+              <dd className="font-mono text-xs truncate max-w-[200px]">{data.meta.trackingNumber || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Record Airtable</dt>
+              <dd className="font-mono text-xs truncate max-w-[180px]">{data.meta.airtableRecordId || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">OrderID Airtable</dt>
+              <dd>{data.meta.airtableOrderId ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-figma-adminSub">Dernière sync</dt>
+              <dd className="text-xs">
+                {data.meta.airtableLastSyncedAt
+                  ? new Date(data.meta.airtableLastSyncedAt).toLocaleString("fr-FR")
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+          {data.meta.lastAirtableError ? (
+            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-3">
+              Airtable : {data.meta.lastAirtableError}
+            </p>
+          ) : null}
+          {(data.integrations || [])
+            .filter((l) => l.lastErrorCode || l.lastErrorMessage)
+            .map((l) => (
+              <p
+                key={`${l.provider}-${l.lastAttemptAt}`}
+                className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-2"
+              >
+                {l.provider}: {l.lastErrorCode ? `[${l.lastErrorCode}] ` : ""}
+                {l.lastErrorMessage}
+              </p>
+            ))}
           <button
             type="button"
-            disabled={!!loading || data.meta.invoiceStatus === "APPROVED"}
-            onClick={() => void approveZoho()}
+            disabled={!!loading}
+            onClick={() => void forceAirtableSync()}
             className="rounded-lg border border-figma-tableBorder px-3 py-2 text-sm font-medium hover:bg-figma-tableHeader disabled:opacity-50"
           >
-            Valider la facture brouillon
+            Forcer sync Airtable
           </button>
         </section>
 
